@@ -2,7 +2,66 @@
 
 **Course:** BU CS 506 - Final Project  
 **Team:** Garry Kuwanto  
-**Proposal Due:** September 22, 2024
+**Midterm Report:** October 27, 2024
+
+## 📹 Midterm Presentation Video
+[![Watch this video](https://img.youtube.com/vi/OPkHkA7z7tw/hqdefault.jpg)](https://youtu.be/OPkHkA7z7tw)
+## 📊 Midterm Report - Preliminary Results
+
+### Data Processing Pipeline
+We successfully processed the **m0no1/dnd-mechanics-dataset** from Hugging Face, containing 40,365 D&D 3.5 mechanics question-answer pairs. Our data processing pipeline includes:
+
+- **Train/Validation/Test Splits:** Implemented proper 80/10/10 data splits for fair evaluation
+- **Data Loading Infrastructure:** Created reusable data loading utilities with proper preprocessing
+
+### Modeling Methods
+We fine-tuned the **sentence-transformers/all-MiniLM-L6-v2** model using:
+
+- **Training Strategy:** Contrastive learning with MultipleNegativesRankingLoss
+- **Framework:** sentence-transformers library in Python
+- **Training Duration:** 5 epochs (2525 steps) with evaluation tracking
+- **Experiment Tracking:** Weights & Biases integration for monitoring training progress
+
+### Preliminary Results
+Our fine-tuned model shows **signnificant improvements** over the baseline across all key metrics:
+
+| Metric | Baseline | Fine-tuned | Improvement |
+|--------|----------|------------|-------------|
+| **Accuracy@1** | 34.8% | **68.2%** | **+96%** |
+| **Accuracy@3** | 50.0% | **78.2%** | **+56%** |
+| **Accuracy@5** | 55.5% | **82.6%** | **+49%** |
+| **MRR@10** | 43.5% | **74.9%** | **+72%** |
+
+### Visual Evidence: Query-Passage Pair Clustering
+Our t-SNE visualization of query-passage pairs demonstrates the model's improved semantic understanding:
+
+![Query-Passage Groups](visualizations/query_passage_groups.png)
+
+**Key Observations:**
+- **Baseline Model (Left):** Query-passage pairs are scattered with long connecting lines, indicating poor semantic alignment
+- **Fine-tuned Model (Right):** Query-passage pairs cluster much closer together with shorter connecting lines, showing improved semantic understanding
+- **Visual Improvement:** The fine-tuned model successfully brings related queries and passages into proximate regions of the embedding space
+- **Quantitative Validation:** This visual evidence directly supports our quantitative metrics showing 72% improvement in MRR@10
+
+### Training Progress
+The validation MRR score shows consistent improvement throughout training, reaching convergence around 0.725 after 2,500 steps, demonstrating stable learning without overfitting.
+
+### Key Findings
+1. **Significant Performance Gains:** Our fine-tuned model achieves 96% improvement in Accuracy@1, demonstrating successful domain adaptation
+2. **Visual Confirmation:** t-SNE plots provide clear visual evidence of improved query-passage semantic alignment
+3. **Stable Training:** Validation metrics show consistent improvement without overfitting
+4. **Reproducible Pipeline:** Complete training and evaluation pipeline ready for replication
+
+### Preliminary Code Implementation
+Our project repository contains comprehensive preliminary code demonstrating the complete pipeline:
+
+- **`dnd_dm_copilot/training/finetune.py`** - Complete training pipeline with data loading, model fine-tuning, and evaluation
+- **`dnd_dm_copilot/visualization/embedding_analysis.py`** - Visualization script for query-passage pair clustering analysis
+
+### Next Steps
+- **RAG Integration:** Build full retrieval-augmented generation system using fine-tuned embeddings
+- **Dataset Expansion:** Integrate additional D&D datasets (FIREBALL, CRD3) for broader coverage
+- **Qualitative Evaluation:** Create challenge set with diverse D&D scenarios for human evaluation
 
 ## Project Description
 
