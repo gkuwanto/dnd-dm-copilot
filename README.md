@@ -89,119 +89,130 @@ The system will provide instant, relevant suggestions to help DMs make informed 
 
 ## Project Goals
 
-### Primary Goal
-Create a specialized retrieval system that can accurately find relevant information from multiple D&D knowledge sources to support a DM copilot tool. The focus is on training a high-quality embedding model for retrieval, while keeping the generation component fixed.
+### Primary Goal (Core Scope)
+Create a focused retrieval system using a single, well-curated D&D dataset to demonstrate the value of domain-specific fine-tuning. The project will focus on:
+- Fine-tuning a lightweight embedding model (all-MiniLM-L6-v2) on D&D mechanics data
+- Comparing retrieval performance against the base model
+- Demonstrating improved semantic understanding of D&D concepts
 
-### Success Criteria
-- **Retrieval Quality:** Fine-tuned embedding model achieves statistically significant improvement in retrieval accuracy over baseline
-- **Multi-Source Capability:** System can effectively search across campaign notes, mechanics, and cross-campaign data
-- **Context-Aware:** Retrieval understands D&D-specific context and relationships
-- **Reproducible:** Complete training pipeline that others can use to fine-tune embedding models for other domains
+### Core Success Criteria
+- **Retrieval Quality:** Fine-tuned model shows measurable improvement in MRR/Recall@k over baseline on D&D mechanics dataset
+- **Semantic Understanding:** Visual evidence of better clustering of D&D terms in embedding space
+- **Reproducible Pipeline:** Complete training and evaluation pipeline that others can replicate
+- **Documentation:** Clear documentation of methodology and results
+
+### Stretch Goals (If Time Permits)
+- **Multi-Source Integration:** Expand to include FIREBALL and CRD3 datasets
+- **Advanced Evaluation:** Comprehensive challenge set with qualitative analysis
+- **RAG System Integration:** Full retrieval-augmented generation system
+- **Cross-Campaign Analysis:** Analysis of retrieval across different campaign types
 
 ## Data Collection Plan
 
-We will create a multi-source knowledge base from the following sources:
+### Core Dataset (Primary Focus)
+1. **D&D Mechanics Dataset (Hugging Face):** 40,365 D&D 3.5 mechanics question-answer pairs
+   - Already in (query, passage) format - minimal preprocessing needed
+   - Split into 80% training, 10% validation, 10% test
+   - Focus on high-quality, domain-specific content
 
-### Training Data Sources
-1. **D&D Mechanics Dataset (Hugging Face):** 40,365 D&D 3.5 mechanics question-answer pairs for learning game rules
-2. **FIREBALL Dataset (Hugging Face):** ~25,000 unique D&D sessions from Discord gameplay for cross-campaign inspiration
-3. **CRD3 Dataset (GitHub):** 398,682 turns from 159 Critical Role episodes for narrative techniques
+### Stretch Goal Datasets (If Time Permits)
+2. **FIREBALL Dataset (Hugging Face):** ~25,000 unique D&D sessions from Discord gameplay
+3. **CRD3 Dataset (GitHub):** 398,682 turns from 159 Critical Role episodes
+4. **Custom Evaluation Set:** Manually curated challenge scenarios for qualitative testing
 
-### Evaluation Data Sources
-4. **Asylum Tapes Campaign (Reddit):** 9 detailed session logs from r/TalesFromDrexlor for campaign-specific testing
-5. **Personal Campaign Notes (Stretch Goal):** Notes from campaigns and one-shots for authentic DM scenario testing
-
-### Data Processing
-- Use DeepSeek V3.1 for LLM-enhanced preprocessing to improve data quality
-- Convert all sources into (query, passage) pairs for contrastive learning
-- Generate realistic DM queries and relevant information chunks
+### Simplified Data Processing
+- **Core Approach:** Use existing D&D mechanics dataset with minimal preprocessing
+- **Stretch Goal:** Implement LLM-enhanced preprocessing for additional datasets
+- **Focus:** Quality over quantity - ensure clean, relevant training pairs
 
 *Detailed data processing strategies are documented in [DATA_SOURCES.md](docs/DATA_SOURCES.md)*
 
 ## Modeling Plan
 
-### Base Model
-- **Options:** sentence-transformers/all-MiniLM-L6-v2 or Qwen3 Embeddings 0.6B
-- **Selection:** Will evaluate both models during initial experimentation phase
+### Core Model (Primary Focus)
+- **Base Model:** sentence-transformers/all-MiniLM-L6-v2 (22M parameters)
+- **Rationale:** Lightweight, fast to train, proven performance for domain adaptation
+- **Training Time:** Estimated 2-4 hours on standard hardware
 
 ### Training Approach
 - **Framework:** sentence-transformers library in Python
 - **Strategy:** Contrastive learning with MultipleNegativesRankingLoss
-- **Process:** Fine-tune embedding model to understand D&D-specific semantic relationships
+- **Process:** Fine-tune on D&D mechanics dataset to improve semantic understanding
+- **Validation:** Use held-out test set for performance evaluation
 
-### System Architecture
-- **Retrieval Component:** Fine-tuned embedding model for multi-source search
-- **Generation Component:** Fixed LLM (GPT-4, Claude) for text generation
-- **Focus:** This project focuses on improving retrieval quality, not generation
+### Stretch Goal Models
+- **Advanced Model:** Qwen3 Embeddings 0.6B (if time permits)
+- **Multi-Dataset Training:** Combine multiple D&D datasets for broader coverage
+- **Advanced Techniques:** Experiment with different loss functions and training strategies
 
 *Detailed technical implementation is documented in [TECHNICAL_DETAILS.md](docs/TECHNICAL_DETAILS.md)*
 
 ## Visualization Plan
 
-### Exploratory Analysis
-- **Word Clouds:** Show most frequent D&D terms in the dataset
+### Core Visualizations (Required)
+- **Embedding Space Analysis:** t-SNE plots showing D&D term clustering before/after fine-tuning
+- **Performance Metrics:** Bar charts comparing MRR and Recall@k scores (baseline vs. fine-tuned)
+- **Retrieval Examples:** 5-10 side-by-side comparisons of top-3 retrieved results
+
+### Stretch Goal Visualizations (If Time Permits)
+- **Word Clouds:** Most frequent D&D terms in the dataset
 - **Data Distribution:** Visualize data across different sources
-
-### Embedding Space Analysis
-- **t-SNE/UMAP Plots:** 2D visualizations of embedding space for D&D terms
-- **Semantic Clusters:** Compare base model vs. fine-tuned model to show improved clustering
-- **Example Terms:** 'Fireball', 'Lich', 'Paladin', 'Attack Roll', 'Saving Throw'
-
-### Performance Visualization
-- **Metric Comparisons:** Bar charts comparing MRR and Recall@k scores
-- **Retrieval Examples:** Side-by-side comparison of top-3 retrieved results
+- **Advanced Clustering:** UMAP plots and interactive visualizations
+- **Comprehensive Examples:** 20+ retrieval examples across different D&D concepts
 
 ## Test Plan
 
-### Quantitative Evaluation
-- **Holdout Test Set:** 15% of dnd-mechanics-dataset (~6,000 pairs)
+### Core Evaluation (Required)
+- **Holdout Test Set:** 10% of dnd-mechanics-dataset (~4,000 pairs)
 - **Metrics:** Mean Reciprocal Rank (MRR) and Recall@k (k=1, 3, 5)
-- **Baseline Comparison:** Compare fine-tuned model against base model
+- **Baseline Comparison:** Compare fine-tuned model against base all-MiniLM-L6-v2 model
+- **Statistical Significance:** Basic t-test to determine if improvements are significant
 
-### Qualitative Evaluation
+### Stretch Goal Evaluation (If Time Permits)
 - **Challenge Set:** 20-30 manually crafted diverse DM scenarios
-- **Retrieval Quality:** Compare top-3 retrieved results for relevance and accuracy
 - **Multi-Source Testing:** Evaluate retrieval across different knowledge sources
-
-### Statistical Significance
-- Use appropriate statistical tests to determine if improvements are significant
-- Report confidence intervals for all metrics
+- **Advanced Statistical Analysis:** Confidence intervals, effect sizes, and comprehensive significance testing
+- **Cross-Dataset Validation:** Test on FIREBALL and CRD3 datasets
 
 ## Project Timeline
 
-### Phase 1: Data Collection and Preparation (Weeks 1-3)
-- Download and explore all datasets
-- Implement data processing pipeline
-- Create training pairs from all sources
-
-### Phase 2: Model Development (Weeks 4-6)
+### Phase 1: Data Preparation (Weeks 1-2)
+- Download and explore D&D mechanics dataset
+- Implement basic data preprocessing and train/val/test splits
 - Set up training environment
-- Implement fine-tuned embedding model
-- Train and iterate on model parameters
 
-### Phase 3: Evaluation and Analysis (Weeks 7-8)
-- Implement evaluation metrics
-- Run quantitative and qualitative evaluation
-- Generate visualizations
+### Phase 2: Model Training (Weeks 3-4)
+- Implement fine-tuning pipeline for all-MiniLM-L6-v2
+- Train model and validate performance
+- Iterate on hyperparameters if needed
 
-### Phase 4: Documentation and Finalization (Weeks 9-10)
-- Document results and findings
+### Phase 3: Evaluation and Analysis (Weeks 5-6)
+- Implement evaluation metrics (MRR, Recall@k)
+- Run quantitative evaluation on test set
+- Generate core visualizations (t-SNE plots, performance comparisons)
+
+### Phase 4: Documentation and Stretch Goals (Weeks 7-8)
+- Document results and methodology
 - Create reproducible pipeline
-- Prepare final presentation
+- **If time permits:** Implement stretch goals (additional datasets, advanced evaluation)
 
 *Detailed implementation plan is documented in [IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)*
 
 ## Expected Outcomes
 
-By the end of this project, we expect to have:
-
+### Core Deliverables (Required)
 1. **A fine-tuned embedding model** that shows measurable improvement in D&D-specific retrieval tasks
-2. **Comprehensive evaluation results** demonstrating the model's capabilities and limitations
-3. **Visualizations** showing the learned semantic structure of D&D concepts
-4. **A reproducible pipeline** that others can use to fine-tune embedding models for other domains
-5. **Documentation** of the full data science lifecycle from data collection to model evaluation
+2. **Quantitative evaluation results** demonstrating improved MRR/Recall@k scores over baseline
+3. **Visual evidence** of better semantic clustering of D&D concepts in embedding space
+4. **A reproducible training pipeline** that others can use to fine-tune embedding models for other domains
+5. **Clear documentation** of methodology, results, and lessons learned
 
-This project will demonstrate the value of domain-specific fine-tuning for specialized applications and provide insights into how to effectively combine multiple data sources for training embedding models.
+### Stretch Goal Deliverables (If Time Permits)
+6. **Multi-dataset integration** showing how to combine different D&D data sources
+7. **Advanced evaluation** with qualitative analysis and challenge sets
+8. **Comprehensive visualizations** including interactive plots and detailed case studies
+
+This project will demonstrate the value of domain-specific fine-tuning for specialized applications, with a focus on achievable, high-quality results rather than comprehensive coverage.
 
 ---
 
