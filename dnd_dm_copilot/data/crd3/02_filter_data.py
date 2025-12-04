@@ -170,10 +170,10 @@ def print_statistics(
     )
     avg_query_after = sum(
         len(p["query"].split()) for p in filtered_pairs[:10000]
-    ) / min(10000, len(filtered_pairs))
+    ) / max(min(10000, len(filtered_pairs)), 1)
     avg_passage_after = sum(
         len(p["passage"].split()) for p in filtered_pairs[:10000]
-    ) / min(10000, len(filtered_pairs))
+    ) / max(min(10000, len(filtered_pairs)), 1)
 
     print(f"Average query length: {avg_query_before:.1f} → {avg_query_after:.1f} words")
     print(

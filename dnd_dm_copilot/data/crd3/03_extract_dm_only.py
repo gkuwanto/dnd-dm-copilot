@@ -24,14 +24,14 @@ def extract_dm_pairs(input_file: str, output_file: str):
     )
 
     # Calculate statistics
-    avg_query = sum(len(p["query"].split()) for p in dm_pairs[:10000]) / min(
-        10000, len(dm_pairs)
+    avg_query = sum(len(p["query"].split()) for p in dm_pairs[:10000]) / max(
+        min(10000, len(dm_pairs)), 1
     )
-    avg_passage = sum(len(p["passage"].split()) for p in dm_pairs[:10000]) / min(
-        10000, len(dm_pairs)
+    avg_passage = sum(len(p["passage"].split()) for p in dm_pairs[:10000]) / max(
+        min(10000, len(dm_pairs)), 1
     )
 
-    print(f"\nDM Response Pair Statistics:")
+    print("\nDM Response Pair Statistics:")
     print(f"  Average query length: {avg_query:.1f} words")
     print(f"  Average passage length: {avg_passage:.1f} words")
 

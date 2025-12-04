@@ -66,8 +66,9 @@ def load_dataset(dataset_path: str) -> List[Dict[str, str]]:
     if len(data) == 0:
         raise ValueError("Dataset is empty")
 
-    # Validate data format
-    for i, item in enumerate(data[:5]):  # Check first 5 items
+    # Validate data format on all items or sample if too large
+    sample_size = min(100, len(data))
+    for i, item in enumerate(data[:sample_size]):
         if not isinstance(item, dict) or "query" not in item or "passage" not in item:
             raise ValueError(
                 f"Invalid data format at index {i}. Expected dict with 'query' and 'passage' keys"
@@ -288,9 +289,9 @@ def train_model(
                 # We'll log it as the main validation metric
                 wandb.log(
                     {
-                        "validation/mrr_score": score
-                        if isinstance(score, (int, float))
-                        else 0,
+                        "validation/mrr_score": (
+                            score if isinstance(score, (int, float)) else 0
+                        ),
                         "training/epoch": epoch,
                         "training/step": steps,
                     }
@@ -340,6 +341,136 @@ def evaluate_test_set(
     print(test_results)
 
     return test_results
+
+
+def setup_wandb_logging(args: argparse.Namespace) -> Optional[object]:
+    """
+    Initialize Weights & Biases logging.
+
+    Args:
+        args: Parsed command line arguments
+
+    Returns:
+        wandb.Run object or None if disabled
+    """
+    if args.disable_wandb:
+        return None
+
+    wandb.init(
+        project=args.wandb_project,
+        name=args.wandb_run_name,
+        config={
+            "model_name": args.model_name,
+            "batch_size": args.batch_size,
+            "num_epochs": args.num_epochs,
+            "evaluation_steps": args.evaluation_steps,
+            "train_ratio": args.train_ratio,
+            "val_ratio": args.val_ratio,
+            "random_state": args.random_state,
+            "dataset": args.dataset,
+            "output_dir": args.output_dir,
+        },
+    )
+    return wandb.run
+
+
+def setup_training_environment() -> None:
+    """Set up the training environment (CUDA checks, etc)."""
+    try:
+        import torch
+
+        if not torch.cuda.is_available():
+            print("Warning: CUDA not available, using CPU (training will be slower)")
+    except ImportError:
+        pass
+
+
+def prepare_train_val_test_splits(
+    args: argparse.Namespace,
+) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], List[Dict[str, str]]]:
+    """
+    Prepare train, validation, and test data splits.
+
+    Args:
+        args: Parsed command line arguments
+
+    Returns:
+        Tuple of (train_data, val_data, test_data)
+    """
+    data = load_dataset(args.dataset)
+
+    if args.test_dataset:
+        print(f"\nUsing separate test dataset: {args.test_dataset}")
+        test_data = load_dataset(args.test_dataset)
+
+        # Split main dataset into train and val only (90/10 split of training data)
+        train_data, val_data = train_test_split(
+            data, test_size=0.1, random_state=args.random_state
+        )
+
+        print(f"Dataset split (with separate test set):")
+        print(
+            f"  Train: {len(train_data)} samples ({len(train_data) / len(data) * 100:.1f}%)"
+        )
+        print(
+            f"  Validation: {len(val_data)} samples ({len(val_data) / len(data) * 100:.1f}%)"
+        )
+        print(f"  Test: {len(test_data)} samples (separate dataset)")
+
+    else:
+        # Original behavior: split from single dataset
+        print("\nUsing single dataset with train/val/test split")
+        train_data, val_data, test_data = split_dataset(
+            data,
+            train_ratio=args.train_ratio,
+            val_ratio=args.val_ratio,
+            random_state=args.random_state,
+        )
+
+    return train_data, val_data, test_data
+
+
+def log_dataset_info_to_wandb(
+    args: argparse.Namespace,
+    train_data: List[Dict[str, str]],
+    val_data: List[Dict[str, str]],
+    test_data: List[Dict[str, str]],
+    baseline_results: Optional[Dict[str, float]] = None,
+) -> None:
+    """
+    Log dataset and experiment information to Weights & Biases.
+
+    Args:
+        args: Parsed command line arguments
+        train_data: Training data
+        val_data: Validation data
+        test_data: Test data
+        baseline_results: Optional baseline evaluation results
+    """
+    if args.disable_wandb:
+        return
+
+    wandb_log = {
+        "train_size": len(train_data),
+        "val_size": len(val_data),
+        "test_size": len(test_data),
+    }
+
+    if args.test_dataset:
+        wandb_log["test_dataset_path"] = args.test_dataset
+    else:
+        total = len(train_data) + len(val_data) + len(test_data)
+        wandb_log["train_ratio"] = len(train_data) / total
+        wandb_log["val_ratio"] = len(val_data) / total
+        wandb_log["test_ratio"] = len(test_data) / total
+
+    if baseline_results:
+        if isinstance(baseline_results, dict):
+            wandb.log({"baseline": baseline_results})
+        else:
+            wandb.log({"baseline/mrr_score": baseline_results})
+
+    wandb.log(wandb_log)
 
 
 def main():
@@ -411,88 +542,18 @@ def main():
 
     args = parser.parse_args()
 
+    # Setup environment
+    setup_training_environment()
+
     # Initialize wandb
-    if not args.disable_wandb:
-        wandb.init(
-            project=args.wandb_project,
-            name=args.wandb_run_name,
-            config={
-                "model_name": args.model_name,
-                "batch_size": args.batch_size,
-                "num_epochs": args.num_epochs,
-                "evaluation_steps": args.evaluation_steps,
-                "train_ratio": args.train_ratio,
-                "val_ratio": args.val_ratio,
-                "random_state": args.random_state,
-                "dataset": args.dataset,
-                "output_dir": args.output_dir,
-            },
-        )
+    setup_wandb_logging(args)
 
     try:
-        # Load training dataset
-        data = load_dataset(args.dataset)
+        # Prepare data splits
+        train_data, val_data, test_data = prepare_train_val_test_splits(args)
 
-        # Load separate test dataset if provided
-        if args.test_dataset:
-            print(f"\nUsing separate test dataset: {args.test_dataset}")
-            test_data = load_dataset(args.test_dataset)
-
-            # Split main dataset into train and val only (90/10 split of training data)
-            train_data, val_data = train_test_split(
-                data, test_size=0.1, random_state=args.random_state
-            )
-
-            print(f"Dataset split (with separate test set):")
-            print(
-                f"  Train: {len(train_data)} samples ({len(train_data) / len(data) * 100:.1f}%)"
-            )
-            print(
-                f"  Validation: {len(val_data)} samples ({len(val_data) / len(data) * 100:.1f}%)"
-            )
-            print(f"  Test: {len(test_data)} samples (separate dataset)")
-
-            # Log dataset information to wandb
-            if not args.disable_wandb:
-                wandb.log(
-                    {
-                        "train_dataset_size": len(data),
-                        "train_dataset_path": args.dataset,
-                        "test_dataset_size": len(test_data),
-                        "test_dataset_path": args.test_dataset,
-                        "train_size": len(train_data),
-                        "val_size": len(val_data),
-                        "test_size": len(test_data),
-                    }
-                )
-        else:
-            # Original behavior: split from single dataset
-            print("\nUsing single dataset with train/val/test split")
-
-            # Log dataset information to wandb
-            if not args.disable_wandb:
-                wandb.log({"dataset_size": len(data), "dataset_path": args.dataset})
-
-            # Split dataset
-            train_data, val_data, test_data = split_dataset(
-                data,
-                train_ratio=args.train_ratio,
-                val_ratio=args.val_ratio,
-                random_state=args.random_state,
-            )
-
-            # Log dataset split information to wandb
-            if not args.disable_wandb:
-                wandb.log(
-                    {
-                        "train_size": len(train_data),
-                        "val_size": len(val_data),
-                        "test_size": len(test_data),
-                        "train_ratio": len(train_data) / len(data),
-                        "val_ratio": len(val_data) / len(data),
-                        "test_ratio": len(test_data) / len(data),
-                    }
-                )
+        # Log dataset information
+        log_dataset_info_to_wandb(args, train_data, val_data, test_data)
 
         # Evaluate baseline model on test set
         print("\nEvaluating baseline model on test set...")
@@ -568,10 +629,10 @@ def main():
                     "comparison/finetuned_mrr": test_mrr,
                     "comparison/improvement": test_mrr - baseline_mrr,
                     "comparison/improvement_percent": (
-                        (test_mrr - baseline_mrr) / baseline_mrr * 100
-                    )
-                    if baseline_mrr > 0
-                    else 0,
+                        ((test_mrr - baseline_mrr) / baseline_mrr * 100)
+                        if baseline_mrr > 0
+                        else 0
+                    ),
                 }
             )
 
