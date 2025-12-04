@@ -2,25 +2,29 @@
 
 import json
 import os
-from typing import List, Dict
-import huggingface_hub
+from typing import Dict, List
 
 import dotenv
+import huggingface_hub
+from datasets import Dataset
 
 dotenv.load_dotenv()
 
 HF_TOKEN = os.getenv("HF_TOKEN")
 
-def load_dnd_mechanics_dataset():
+
+def load_dnd_mechanics_dataset() -> List[Dataset]:
     """Load dnd-mechanics-dataset from Hugging Face"""
     try:
         from datasets import load_dataset
+
         dataset = load_dataset("m0no1/dnd-mechanics-dataset", split="train")
         return dataset
 
     except Exception as e:
         print(f"Error loading dnd-mechanics-dataset: {e}")
         return []
+
 
 def preprocess_dataset(dataset: List[Dict]) -> List[Dict]:
     # rename instruction to query
@@ -29,12 +33,12 @@ def preprocess_dataset(dataset: List[Dict]) -> List[Dict]:
     processed_dataset = []
 
     for item in dataset:
-        processed_dataset.append({
-            "query": item["instruction"],
-            "passage": item["output"]
-        })
+        processed_dataset.append(
+            {"query": item["instruction"], "passage": item["output"]}
+        )
 
     return processed_dataset
+
 
 def main():
     """Main function"""
@@ -50,23 +54,23 @@ def main():
     print(f"Saved to dnd-mechanics-dataset.json")
 
     huggingface_hub.create_repo(
-        "garrykuwanto/dnd-mechanics-dataset", 
-        repo_type="dataset", 
-        token=HF_TOKEN, 
-        exist_ok=True
+        "garrykuwanto/dnd-mechanics-dataset",
+        repo_type="dataset",
+        token=HF_TOKEN,
+        exist_ok=True,
     )
 
     # Upload to garrykuwanto/dnd-mechanics-dataset
     huggingface_hub.upload_file(
-        path_or_fileobj="dnd-mechanics-dataset.json", 
+        path_or_fileobj="dnd-mechanics-dataset.json",
         path_in_repo="dnd-mechanics-dataset.json",
-        repo_id="garrykuwanto/dnd-mechanics-dataset", 
-        repo_type="dataset", 
-        token=HF_TOKEN
+        repo_id="garrykuwanto/dnd-mechanics-dataset",
+        repo_type="dataset",
+        token=HF_TOKEN,
     )
 
     print(f"Uploaded to garrykuwanto/dnd-mechanics-dataset")
 
+
 if __name__ == "__main__":
     main()
-    
