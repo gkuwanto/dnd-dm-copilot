@@ -8,3 +8,4 @@ cache/
 *.csv
 wandb/
 models/
+data/
