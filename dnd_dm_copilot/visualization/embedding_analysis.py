@@ -9,7 +9,7 @@ Usage:
 
 import json
 import os
-from typing import Any, List, Dict
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,7 +73,9 @@ def load_test_dataset() -> tuple[Any, ...]:
         return None  # type: ignore
 
 
-def generate_test_embeddings(models: tuple[Any, ...], test_pairs: list[Any]) -> dict[str, Any]:
+def generate_test_embeddings(
+    models: tuple[Any, ...], test_pairs: list[Any]
+) -> dict[str, Any]:
     """Generate embeddings for actual test set query-passage pairs"""
 
     baseline_model, finetuned_model = models

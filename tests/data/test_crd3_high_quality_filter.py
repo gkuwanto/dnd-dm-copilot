@@ -271,16 +271,12 @@ class TestCalculateQualityScore:
         """Test that longer passages get bonus."""
         pair_long = {
             "query": "Player says: I search the room",
-            "passage": (
-                "DM responds: " + " ".join(["word"] * 35)  # 35 words
-            ),
+            "passage": ("DM responds: " + " ".join(["word"] * 35)),  # 35 words
         }
 
         pair_short = {
             "query": "Player says: I search the room",
-            "passage": (
-                "DM responds: " + " ".join(["word"] * 15)  # 15 words
-            ),
+            "passage": ("DM responds: " + " ".join(["word"] * 15)),  # 15 words
         }
 
         score_long = calculate_quality_score(pair_long)
