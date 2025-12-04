@@ -218,7 +218,7 @@ def create_training_dataset(
     return all_pairs
 
 
-def main():
+def main() -> None:
     # Load CRD3 data
     # get dir from where call
     #

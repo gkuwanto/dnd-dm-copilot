@@ -126,15 +126,14 @@ class TestMain:
         mock_config_obj = MagicMock()
         mock_config_obj.hf_token = "test-token"
 
-        with patch.object(
-            dnd_mechanics_module, "load_dnd_mechanics_dataset"
-        ) as mock_load, patch.object(
-            dnd_mechanics_module, "load_config"
-        ) as mock_config, patch.object(
-            dnd_mechanics_module, "save_json_pairs"
-        ) as mock_save, patch(
-            "dnd_dm_copilot.utils.upload_to_huggingface"
-        ) as mock_upload:
+        with (
+            patch.object(
+                dnd_mechanics_module, "load_dnd_mechanics_dataset"
+            ) as mock_load,
+            patch.object(dnd_mechanics_module, "load_config") as mock_config,
+            patch.object(dnd_mechanics_module, "save_json_pairs") as mock_save,
+            patch("dnd_dm_copilot.utils.upload_to_huggingface") as mock_upload,
+        ):
             mock_load.return_value = mock_dataset
             mock_config.return_value = mock_config_obj
 
@@ -157,11 +156,12 @@ class TestMain:
         """Test successful main execution without upload."""
         mock_dataset = [{"instruction": "Query 1", "output": "Passage 1"}]
 
-        with patch.object(
-            dnd_mechanics_module, "load_dnd_mechanics_dataset"
-        ) as mock_load, patch.object(
-            dnd_mechanics_module, "save_json_pairs"
-        ) as mock_save:
+        with (
+            patch.object(
+                dnd_mechanics_module, "load_dnd_mechanics_dataset"
+            ) as mock_load,
+            patch.object(dnd_mechanics_module, "save_json_pairs") as mock_save,
+        ):
             mock_load.return_value = mock_dataset
 
             main(output_file="test.json", upload=False)
@@ -186,15 +186,14 @@ class TestMain:
         mock_config_obj = MagicMock()
         mock_config_obj.hf_token = "test-token"
 
-        with patch.object(
-            dnd_mechanics_module, "load_dnd_mechanics_dataset"
-        ) as mock_load, patch.object(
-            dnd_mechanics_module, "load_config"
-        ) as mock_config, patch.object(
-            dnd_mechanics_module, "save_json_pairs"
-        ) as mock_save, patch(
-            "dnd_dm_copilot.utils.upload_to_huggingface"
-        ) as mock_upload:
+        with (
+            patch.object(
+                dnd_mechanics_module, "load_dnd_mechanics_dataset"
+            ) as mock_load,
+            patch.object(dnd_mechanics_module, "load_config") as mock_config,
+            patch.object(dnd_mechanics_module, "save_json_pairs") as mock_save,
+            patch("dnd_dm_copilot.utils.upload_to_huggingface") as mock_upload,
+        ):
             mock_load.return_value = mock_dataset
             mock_config.return_value = mock_config_obj
             mock_upload.side_effect = Exception("Upload failed")

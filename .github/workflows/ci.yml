@@ -1,97 +1,84 @@
 name: CI
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11']
+    test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: ["3.11", "3.12"]
 
-    steps:
-    - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  enable-cache: true
 
-    - name: Install dependencies
-      run: uv sync
+            - name: Install dependencies
+              run: uv sync
 
-    - name: Run tests with coverage
-      run: uv run pytest --cov=dnd_dm_copilot --cov-report=xml --cov-report=term-missing
+            - name: Run tests with coverage
+              run: uv run pytest --cov=dnd_dm_copilot --cov-report=xml --cov-report=term-missing
+    lint:
+        runs-on: ubuntu-latest
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+        steps:
+            - uses: actions/checkout@v4
 
-  lint:
-    runs-on: ubuntu-latest
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
 
-    steps:
-    - uses: actions/checkout@v4
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  enable-cache: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+            - name: Install dependencies
+              run: uv sync
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            - name: Run black formatting check
+              run: uv run black --check dnd_dm_copilot/ tests/
 
-    - name: Install dependencies
-      run: uv sync
+            - name: Run flake8 linting
+              run: uv run flake8 dnd_dm_copilot/ tests/
 
-    - name: Run black formatting check
-      run: uv run black --check dnd_dm_copilot/ tests/
-      continue-on-error: true
+            - name: Run mypy type checking
+              run: uv run mypy dnd_dm_copilot/
 
-    - name: Run flake8 linting
-      run: uv run flake8 dnd_dm_copilot/ tests/
-      continue-on-error: true
+    security-check:
+        runs-on: ubuntu-latest
 
-    - name: Run mypy type checking
-      run: uv run mypy dnd_dm_copilot/
-      continue-on-error: true
+        steps:
+            - uses: actions/checkout@v4
 
-  security-check:
-    runs-on: ubuntu-latest
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
 
-    steps:
-    - uses: actions/checkout@v4
+            - name: Install uv
+              uses: astral-sh/setup-uv@v3
+              with:
+                  enable-cache: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+            - name: Install dependencies
+              run: uv sync
 
-    - name: Install uv
-      run: |
-        curl -LsSf https://astral.sh/uv/install.sh | sh
-        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-
-    - name: Install dependencies
-      run: uv sync
-
-    - name: Check for secrets with detect-secrets
-      run: |
-        pip install detect-secrets
-        detect-secrets scan --baseline .secrets.baseline --all-files || true
-      continue-on-error: true
+            - name: Check for secrets with detect-secrets
+              run: |
+                  uv pip install detect-secrets
+                  uv run detect-secrets scan --baseline .secrets.baseline

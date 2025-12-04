@@ -1,12 +1,12 @@
 """LLM client for interacting with DeepSeek API."""
 
 import logging
+import os
 import time
 from typing import Any, Optional
 
 import openai
 from dotenv import load_dotenv
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +44,7 @@ class DeepSeekClient:
         """
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
         if not self.api_key:
-            raise LLMClientError(
-                "DEEPSEEK_API_KEY not provided. Set it as an argument or in environment variables."
-            )
+            raise LLMClientError("DEEPSEEK_API_KEY not provided.")
 
         self.base_url = base_url
         self.max_retries = max_retries
@@ -110,7 +108,7 @@ class DeepSeekClient:
         for attempt in range(self.max_retries):
             try:
                 logger.debug(
-                    f"Chat completion request (attempt {attempt + 1}/{self.max_retries})"
+                    f"Chat completion attempt(attempt {attempt}/{self.max_retries})"
                 )
 
                 response = self.client.chat.completions.create(
@@ -121,9 +119,12 @@ class DeepSeekClient:
                     **kwargs,
                 )
 
-                return response.choices[0].message.content
+                content = response.choices[0].message.content
+                if isinstance(content, str):
+                    return content
+                return str(content)
 
-            except (openai.RateLimitError, openai.Timeout) as e:
+            except (openai.RateLimitError, openai.Timeout) as e:  # type: ignore
                 last_error = e
                 logger.warning(f"Attempt {attempt + 1} failed: {e}")
 

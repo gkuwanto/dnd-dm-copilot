@@ -9,6 +9,7 @@ Usage:
 
 import json
 import os
+from typing import Any, List, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +18,7 @@ from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
 
 
-def load_minilm_models():
+def load_minilm_models() -> tuple[Any, Any]:
     """Load baseline and fine-tuned MiniLM models"""
 
     baseline_model = None
@@ -35,10 +36,10 @@ def load_minilm_models():
 
     except Exception as e:
         print(f"❌ Error loading models: {e}")
-        return None, None
+        return None, None  # type: ignore
 
 
-def load_test_dataset():
+def load_test_dataset() -> tuple[Any, ...]:
     """Load D&D mechanics dataset and split it like finetune.py"""
     try:
         print("🔄 Loading D&D mechanics dataset...")
@@ -54,7 +55,8 @@ def load_test_dataset():
         )
 
         print(
-            f"📊 Dataset split: {len(train_data)} train, {len(val_data)} val, {len(test_data)} test"
+            f"📊 Dataset split: {len(train_data)} train,"
+            f" {len(val_data)} val, {len(test_data)} test"
         )
 
         # Sample 30 pairs from test set
@@ -64,14 +66,14 @@ def load_test_dataset():
             test_sample = test_data
 
         print(f"🎯 Using {len(test_sample)} test pairs for visualization")
-        return test_sample
+        return test_sample  # type: ignore
 
     except Exception as e:
         print(f"❌ Error loading dataset: {e}")
-        return None
+        return None  # type: ignore
 
 
-def generate_test_embeddings(models, test_pairs):
+def generate_test_embeddings(models: tuple[Any, ...], test_pairs: list[Any]) -> dict[str, Any]:
     """Generate embeddings for actual test set query-passage pairs"""
 
     baseline_model, finetuned_model = models
@@ -117,28 +119,28 @@ def generate_test_embeddings(models, test_pairs):
             queries,
             passages,
             group_labels,
-        )
+        )  # type: ignore
 
     except Exception as e:
         print(f"❌ Error generating test embeddings: {e}")
-        return None, None, None, None, None
+        return None, None, None, None, None  # type: ignore
 
 
 def create_query_passage_group_plot(
-    baseline_embeddings,
-    finetuned_embeddings,
-    queries,
-    passages,
-    group_labels,
-    title,
-    filename,
-):
+    baseline_embeddings: Any,
+    finetuned_embeddings: Any,
+    queries: list[Any],
+    passages: list[Any],
+    group_labels: list[Any],
+    title: str,
+    filename: str,
+) -> None:
     """Create t-SNE visualization showing query-passage pairs as groups"""
 
     print(f"📊 Creating query-passage group plot: {title}")
 
-    baseline_query_emb, baseline_passage_emb = baseline_embeddings
-    finetuned_query_emb, finetuned_passage_emb = finetuned_embeddings
+    baseline_query_emb, baseline_passage_emb = baseline_embeddings  # type: ignore
+    finetuned_query_emb, finetuned_passage_emb = finetuned_embeddings  # type: ignore
 
     # Combine query and passage embeddings for t-SNE
     baseline_combined = np.vstack([baseline_query_emb, baseline_passage_emb])
@@ -253,7 +255,7 @@ def create_query_passage_group_plot(
     print(f"✅ {filename} saved successfully")
 
 
-def main():
+def main() -> None:
     """Main function to generate query-passage group visualizations"""
     print("🎯 D&D DM Copilot - Query-Passage Group Analysis")
     print("=" * 50)
@@ -279,8 +281,8 @@ def main():
         print("\n🚀 Using REAL MiniLM models for embedding generation!")
 
         # Use actual test query-passage pairs
-        result = generate_test_embeddings(models, test_pairs)
-        if result[0] is not None:
+        result = generate_test_embeddings(models, test_pairs)  # type: ignore
+        if result[0] is not None:  # type: ignore
             (
                 baseline_embeddings,
                 finetuned_embeddings,
@@ -302,9 +304,9 @@ def main():
         create_query_passage_group_plot(
             baseline_embeddings,
             finetuned_embeddings,
-            queries,
-            passages,
-            group_labels,
+            queries,  # type: ignore
+            passages,  # type: ignore
+            group_labels,  # type: ignore
             "Test Set - Real MiniLM",
             "query_passage_groups.png",
         )

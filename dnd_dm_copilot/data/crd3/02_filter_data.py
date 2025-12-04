@@ -5,7 +5,6 @@ Removes low-quality pairs (very short passages, dice rolls, etc.)
 """
 
 import json
-import os
 from typing import Dict, List
 
 
@@ -87,7 +86,7 @@ def filter_training_pairs(
     remove_dice_rolls: bool = True,
     remove_fillers: bool = True,
     keep_dm_responses: bool = True,
-) -> List[Dict]:
+) -> tuple[List[Dict], Dict[str, int]]:
     """Filter training pairs based on quality criteria"""
     filtered_pairs = []
 
@@ -143,7 +142,7 @@ def filter_training_pairs(
 
 def print_statistics(
     stats: Dict, filtered_pairs: List[Dict], original_pairs: List[Dict]
-):
+) -> None:
     """Print filtering statistics"""
     print("\n" + "=" * 60)
     print("FILTERING STATISTICS")
@@ -151,7 +150,8 @@ def print_statistics(
     print(f"Original pairs: {stats['total']:,}")
     print(f"Filtered pairs: {stats['kept']:,}")
     print(
-        f"Removed: {stats['total'] - stats['kept']:,} ({(stats['total'] - stats['kept']) / stats['total'] * 100:.1f}%)"
+        f"Removed: {stats['total'] - stats['kept']:,}"
+        "({(stats['total'] - stats['kept']) / stats['total'] * 100:.1f}%)"
     )
     print()
     print("Removal reasons:")
@@ -177,12 +177,13 @@ def print_statistics(
 
     print(f"Average query length: {avg_query_before:.1f} → {avg_query_after:.1f} words")
     print(
-        f"Average passage length: {avg_passage_before:.1f} → {avg_passage_after:.1f} words"
+        f"Average passage length: {avg_passage_before:.1f} "
+        f"→ {avg_passage_after:.1f} words"
     )
     print("=" * 60)
 
 
-def main():
+def main() -> None:
     input_file = "crd3_training_pairs_no_llm.json"
     output_file = "crd3_training_pairs_filtered.json"
 

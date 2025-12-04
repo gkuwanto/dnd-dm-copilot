@@ -2,9 +2,8 @@
 
 from unittest.mock import patch
 
-import pytest
-
 # Import module with numeric prefix using __import__
+
 hq_filter_module = __import__(
     "dnd_dm_copilot.data.crd3.04_high_quality_filter",
     fromlist=[
@@ -35,7 +34,10 @@ class TestHasMeaningfulContent:
 
     def test_meaningful_content_long_text(self):
         """Test detection of meaningful long text."""
-        text = "DM responds: You see a large chamber with stone walls and flickering torches"
+        text = (
+            "DM responds: You see a large chamber with stone walls and "
+            "flickering torches"
+        )
         assert has_meaningful_content(text) is True
 
     def test_meaningful_content_short_text(self):
@@ -60,7 +62,10 @@ class TestHasMeaningfulContent:
 
     def test_meaningful_substantial_response(self):
         """Test acceptance of substantial responses."""
-        text = "DM responds: You enter a dark cavern with the sound of dripping water echoing"
+        text = (
+            "DM responds: You enter a dark cavern with the sound of "
+            "dripping water echoing"
+        )
         assert has_meaningful_content(text) is True
 
 
@@ -200,8 +205,15 @@ class TestCalculateQualityScore:
     def test_high_quality_pair(self):
         """Test scoring of high-quality pair."""
         pair = {
-            "query": "Player says: I want to carefully search the ancient library for clues about the artifact",
-            "passage": "DM responds: You see ancient tomes lining the walls as you make a perception check with advantage because of your careful approach",
+            "query": (
+                "Player says: I want to carefully search the ancient "
+                "library for clues about the artifact"
+            ),
+            "passage": (
+                "DM responds: You see ancient tomes lining the walls as you "
+                "make a perception check with advantage because of your "
+                "careful approach"
+            ),
         }
 
         score = calculate_quality_score(pair)
@@ -222,7 +234,10 @@ class TestCalculateQualityScore:
         """Test that narration increases score."""
         pair_with_narration = {
             "query": "Player says: I look around the room",
-            "passage": "DM responds: You see flickering torches casting shadows on ancient stone walls",
+            "passage": (
+                "DM responds: You see flickering torches casting shadows on "
+                "ancient stone walls"
+            ),
         }
 
         pair_without_narration = {
@@ -256,13 +271,16 @@ class TestCalculateQualityScore:
         """Test that longer passages get bonus."""
         pair_long = {
             "query": "Player says: I search the room",
-            "passage": "DM responds: "
-            + " ".join(["word"] * 35),  # 35 words
+            "passage": (
+                "DM responds: " + " ".join(["word"] * 35)  # 35 words
+            ),
         }
 
         pair_short = {
             "query": "Player says: I search the room",
-            "passage": "DM responds: " + " ".join(["word"] * 15),  # 15 words
+            "passage": (
+                "DM responds: " + " ".join(["word"] * 15)  # 15 words
+            ),
         }
 
         score_long = calculate_quality_score(pair_long)
@@ -279,12 +297,15 @@ class TestFilterHighQualityPairs:
         pairs = [
             {
                 "query": "Player says: I carefully search the ancient ruins",
-                "passage": "DM responds: You see crumbling walls and hear the wind whistling through broken windows",
+                "passage": (
+                    "DM responds: You see crumbling walls and hear the wind "
+                    "whistling through broken windows"
+                ),
             },
             {"query": "Hi", "passage": "Yes"},
             {
                 "query": "Player says: I attack with my sword",
-                "passage": "DM responds: Roll a d20 and add your strength modifier",
+                "passage": ("DM responds: Roll a d20 and add your strength modifier"),
             },
         ]
 
@@ -302,7 +323,10 @@ class TestFilterHighQualityPairs:
         pairs = [
             {
                 "query": "Player says: I search the room for clues",
-                "passage": "DM responds: You see ancient symbols carved into the walls as you roll perception",
+                "passage": (
+                    "DM responds: You see ancient symbols carved into the "
+                    "walls as you roll perception"
+                ),
             }
         ] * 100
 
@@ -363,8 +387,13 @@ class TestMain:
 
         pairs = [
             {
-                "query": "Player says: I want to search the ancient library carefully",
-                "passage": "DM responds: You see dusty tomes and scrolls as you roll perception with advantage",
+                "query": (
+                    "Player says: I want to search the ancient library carefully"
+                ),
+                "passage": (
+                    "DM responds: You see dusty tomes and scrolls as you "
+                    "roll perception with advantage"
+                ),
             }
         ] * 100
 
@@ -372,7 +401,10 @@ class TestMain:
             json.dump(pairs, f)
 
         with (
-            patch("builtins.open", side_effect=[open(input_file, "r"), open(output_file, "w")]),
+            patch(
+                "builtins.open",
+                side_effect=[open(input_file, "r"), open(output_file, "w")],
+            ),
             patch("json.load", return_value=pairs),
             patch("json.dump") as mock_dump,
         ):
@@ -390,8 +422,14 @@ class TestMain:
         # Create pairs with varying quality
         pairs = [
             {
-                "query": "Player says: I carefully examine the ancient ruins for any signs of the artifact",
-                "passage": "DM responds: You see crumbling stone walls with mystical runes as you make an investigation check",
+                "query": (
+                    "Player says: I carefully examine the ancient ruins "
+                    "for any signs of the artifact"
+                ),
+                "passage": (
+                    "DM responds: You see crumbling stone walls with mystical "
+                    "runes as you make an investigation check"
+                ),
             }
         ] * 50
         pairs += [{"query": "Hi", "passage": "Yes"}] * 50

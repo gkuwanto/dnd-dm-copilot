@@ -20,31 +20,52 @@ def sample_query_passage_pairs() -> List[Dict[str, str]]:
     return [
         {
             "query": "How does Divine Smite work?",
-            "passage": "Divine Smite is a Paladin class feature that allows you to expend a spell slot...",
+            "passage": (
+                "Divine Smite is a Paladin class feature that allows you to "
+                "expend a spell slot..."
+            ),
         },
         {
             "query": "What is the range of Fireball?",
-            "passage": "Fireball has a range of 150 feet and creates a sphere of 20-foot radius...",
+            "passage": (
+                "Fireball has a range of 150 feet and creates a sphere of "
+                "20-foot radius..."
+            ),
         },
         {
             "query": "How does advantage work?",
-            "passage": "When you have advantage, you roll two d20s and use the higher result...",
+            "passage": (
+                "When you have advantage, you roll two d20s and use the "
+                "higher result..."
+            ),
         },
         {
             "query": "What are hit dice?",
-            "passage": "Hit dice are used to determine how many hit points you recover when resting...",
+            "passage": (
+                "Hit dice are used to determine how many hit points you "
+                "recover when resting..."
+            ),
         },
         {
             "query": "How do saving throws work?",
-            "passage": "A saving throw represents an attempt to resist a spell, trap, poison, disease...",
+            "passage": (
+                "A saving throw represents an attempt to resist a spell, "
+                "trap, poison, disease..."
+            ),
         },
         {
             "query": "What is armor class?",
-            "passage": "Armor Class (AC) is a measure of how difficult it is to hit a creature...",
+            "passage": (
+                "Armor Class (AC) is a measure of how difficult it is to "
+                "hit a creature..."
+            ),
         },
         {
             "query": "How do spell slots work?",
-            "passage": "Spell slots represent the energy you have to cast spells of particular levels...",
+            "passage": (
+                "Spell slots represent the energy you have to cast spells "
+                "of particular levels..."
+            ),
         },
         {
             "query": "What is initiative?",
@@ -52,7 +73,9 @@ def sample_query_passage_pairs() -> List[Dict[str, str]]:
         },
         {
             "query": "How does concentration work?",
-            "passage": "Some spells require concentration to maintain their effects...",
+            "passage": (
+                "Some spells require concentration to maintain their effects..."
+            ),
         },
         {
             "query": "What are ability scores?",
@@ -60,11 +83,15 @@ def sample_query_passage_pairs() -> List[Dict[str, str]]:
         },
         {
             "query": "How does inspiration work?",
-            "passage": "Inspiration is a reward for roleplay that lets you reroll a d20...",
+            "passage": (
+                "Inspiration is a reward for roleplay that lets you reroll a d20..."
+            ),
         },
         {
             "query": "What is proficiency bonus?",
-            "passage": "Your proficiency bonus is added to rolls you are proficient in...",
+            "passage": (
+                "Your proficiency bonus is added to rolls you are proficient in..."
+            ),
         },
     ]
 

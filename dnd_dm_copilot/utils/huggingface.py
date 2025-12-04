@@ -45,7 +45,8 @@ def upload_to_huggingface(
     for attempt in range(max_retries):
         try:
             logger.info(
-                f"Uploading {file_path} to {repo_id} (attempt {attempt + 1}/{max_retries})"
+                f"Uploading {file_path} to {repo_id}"
+                f" (attempt {attempt + 1}/{max_retries})"
             )
 
             upload_file(

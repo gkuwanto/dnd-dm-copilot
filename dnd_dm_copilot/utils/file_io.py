@@ -34,7 +34,7 @@ def save_json_pairs(pairs: List[Dict[str, Any]], filepath: str, **kwargs: Any) -
         ensure_directory_exists(str(parent_dir))
 
     # Set default kwargs
-    default_kwargs = {"indent": 2, "ensure_ascii": False}
+    default_kwargs: Dict[str, Any] = {"indent": 2, "ensure_ascii": False}
     default_kwargs.update(kwargs)
 
     try:

@@ -1,11 +1,11 @@
 """Process D&D mechanics dataset and create training pairs."""
 
 import logging
-from typing import Any, Dict, List
+from typing import Dict, List
 
-from datasets import load_dataset, Dataset
+from datasets import Dataset, load_dataset
 
-from dnd_dm_copilot.utils import save_json_pairs, load_config, get_logger
+from dnd_dm_copilot.utils import get_logger, load_config, save_json_pairs
 
 logger = get_logger(__name__)
 
@@ -56,10 +56,9 @@ def preprocess_dataset(dataset: Dataset) -> List[Dict[str, str]]:
                 logger.warning(f"Skipping item {idx}: missing required fields")
                 continue
 
-            processed_dataset.append({
-                "query": item["instruction"],
-                "passage": item["output"]
-            })
+            processed_dataset.append(
+                {"query": item["instruction"], "passage": item["output"]}
+            )
 
         except (KeyError, TypeError) as e:
             logger.warning(f"Error processing item {idx}: {e}")

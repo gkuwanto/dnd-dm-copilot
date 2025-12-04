@@ -8,14 +8,20 @@ model saving functionality, and Weights & Biases logging for experiment tracking
 
 Usage:
     # Basic usage
-    uv run -m dnd_dm_copilot.training.finetune --dataset dnd-mechanics-dataset.json --output_dir output/sbert_retrieval_model
+    uv run -m dnd_dm_copilot.training.finetune
+        --dataset dnd-mechanics-dataset.json
+        --output_dir output/sbert_retrieval_model
 
     # With custom wandb project and run name
-    uv run -m dnd_dm_copilot.training.finetune --dataset dnd-mechanics-dataset.json --output_dir output/sbert_retrieval_model \
+    uv run -m dnd_dm_copilot.training.finetune
+        --dataset dnd-mechanics-dataset.json
+        --output_dir output/sbert_retrieval_model \
         --wandb_project "my-project" --wandb_run_name "experiment-1"
 
     # Disable wandb logging
-    uv run -m dnd_dm_copilot.training.finetune --dataset dnd-mechanics-dataset.json --output_dir output/sbert_retrieval_model \
+    uv run -m dnd_dm_copilot.training.finetune
+        --dataset dnd-mechanics-dataset.json
+        --output_dir output/sbert_retrieval_model \
         --disable_wandb
 """
 
@@ -23,20 +29,17 @@ import argparse
 import json
 import math
 import os
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import dotenv
-
-dotenv.load_dotenv()
-
-import numpy as np
 from sentence_transformers import InputExample, SentenceTransformer, losses, models
 from sentence_transformers.evaluation import InformationRetrievalEvaluator
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 import wandb
+
+dotenv.load_dotenv()
 
 
 def load_dataset(dataset_path: str) -> List[Dict[str, str]]:
@@ -71,7 +74,8 @@ def load_dataset(dataset_path: str) -> List[Dict[str, str]]:
     for i, item in enumerate(data[:sample_size]):
         if not isinstance(item, dict) or "query" not in item or "passage" not in item:
             raise ValueError(
-                f"Invalid data format at index {i}. Expected dict with 'query' and 'passage' keys"
+                f"Invalid data format at index {i}."
+                " Expected dict with 'query' and 'passage' keys"
             )
 
     print(f"Loaded {len(data)} query-passage pairs")
@@ -113,12 +117,13 @@ def split_dataset(
         random_state=random_state,
     )
 
-    print(f"Dataset split:")
+    print("Dataset split:")
     print(
         f"  Train: {len(train_data)} samples ({len(train_data) / len(data) * 100:.1f}%)"
     )
     print(
-        f"  Validation: {len(val_data)} samples ({len(val_data) / len(data) * 100:.1f}%)"
+        f"  Validation: {len(val_data)} samples"
+        f" ({len(val_data) / len(data) * 100:.1f}%)"
     )
     print(f"  Test: {len(test_data)} samples ({len(test_data) / len(data) * 100:.1f}%)")
 
@@ -165,7 +170,7 @@ def prepare_training_data(
     for item in train_data:
         train_examples.append(InputExample(texts=[item["query"], item["passage"]]))
 
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)
+    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)  # type: ignore
 
     print(f"Created {len(train_examples)} training examples")
     return train_dataloader
@@ -184,9 +189,9 @@ def prepare_ir_evaluator(
     Returns:
         Configured InformationRetrievalEvaluator
     """
-    queries = {}  # qid -> query
-    corpus = {}  # pid -> passage
-    relevant_docs = {}  # qid -> set(pid)
+    queries: Dict[str, str] = {}  # qid -> query
+    corpus: Dict[str, str] = {}  # pid -> passage
+    relevant_docs: Dict[str, set] = {}  # qid -> set(pid)
 
     # Use mappings to ensure unique IDs for unique texts
     query_to_qid = {}
@@ -270,7 +275,7 @@ def train_model(
                 "training/warmup_steps": warmup_steps,
                 "training/evaluation_steps": evaluation_steps,
                 "training/batch_size": train_dataloader.batch_size,
-                "training/train_examples": len(train_dataloader.dataset),
+                "training/train_examples": len(train_dataloader.dataset),  # type: ignore
             }
         )
 
@@ -283,7 +288,7 @@ def train_model(
             self.use_wandb = use_wandb
             self.step = 0
 
-        def __call__(self, score, epoch, steps):
+        def __call__(self, score: object, epoch: int, steps: int) -> None:
             if self.use_wandb:
                 # The score parameter is typically a float (MRR score)
                 # We'll log it as the main validation metric
@@ -408,12 +413,14 @@ def prepare_train_val_test_splits(
             data, test_size=0.1, random_state=args.random_state
         )
 
-        print(f"Dataset split (with separate test set):")
+        print("Dataset split (with separate test set):")
         print(
-            f"  Train: {len(train_data)} samples ({len(train_data) / len(data) * 100:.1f}%)"
+            f"  Train: {len(train_data)} samples"
+            f"({len(train_data) / len(data) * 100:.1f}%)"
         )
         print(
-            f"  Validation: {len(val_data)} samples ({len(val_data) / len(data) * 100:.1f}%)"
+            f"  Validation: {len(val_data)} samples"
+            f" ({len(val_data) / len(data) * 100:.1f}%)"
         )
         print(f"  Test: {len(test_data)} samples (separate dataset)")
 
@@ -450,7 +457,7 @@ def log_dataset_info_to_wandb(
     if args.disable_wandb:
         return
 
-    wandb_log = {
+    wandb_log: Dict[str, Any] = {
         "train_size": len(train_data),
         "val_size": len(val_data),
         "test_size": len(test_data),
@@ -460,9 +467,9 @@ def log_dataset_info_to_wandb(
         wandb_log["test_dataset_path"] = args.test_dataset
     else:
         total = len(train_data) + len(val_data) + len(test_data)
-        wandb_log["train_ratio"] = len(train_data) / total
-        wandb_log["val_ratio"] = len(val_data) / total
-        wandb_log["test_ratio"] = len(test_data) / total
+        wandb_log["train_ratio"] = float(len(train_data) / total)  # type: ignore
+        wandb_log["val_ratio"] = float(len(val_data) / total)  # type: ignore
+        wandb_log["test_ratio"] = float(len(test_data) / total)  # type: ignore
 
     if baseline_results:
         if isinstance(baseline_results, dict):
@@ -473,7 +480,7 @@ def log_dataset_info_to_wandb(
     wandb.log(wandb_log)
 
 
-def main():
+def main() -> None:
     """Main function to run fine-tuning pipeline."""
     parser = argparse.ArgumentParser(
         description="Fine-tune sentence transformer for D&D mechanics retrieval"
@@ -615,9 +622,9 @@ def main():
 
             # Log model as artifact
             model_artifact = wandb.Artifact(
-                name=f"sbert-retrieval-model-{wandb.run.id}",
+                name=f"sbert-retrieval-model-{wandb.run.id}",  # type: ignore
                 type="model",
-                description="Fine-tuned sentence transformer for D&D mechanics retrieval",
+                description="Fine-tuned sentence transformer for D&D",
             )
             model_artifact.add_dir(args.output_dir)
             wandb.log_artifact(model_artifact)

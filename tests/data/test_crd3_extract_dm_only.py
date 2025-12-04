@@ -1,8 +1,6 @@
 """Tests for CRD3 extract_dm_only processor."""
 
-from unittest.mock import mock_open, patch
-
-import pytest
+from unittest.mock import patch
 
 # Import module with numeric prefix using __import__
 extract_dm_module = __import__(
@@ -121,7 +119,9 @@ class TestExtractDmPairs:
         pairs = [
             {
                 "query": "Player says: I attack the goblin with my sword",
-                "passage": "DM responds: Roll an attack roll using your strength modifier",
+                "passage": (
+                    "DM responds: Roll an attack roll using your strength modifier"
+                ),
             },
             {"query": "What?", "passage": "Nothing special"},
         ]
@@ -184,7 +184,10 @@ class TestMain:
         # Patch the file paths in main
         with (
             patch("os.path.exists", return_value=True),
-            patch("builtins.open", side_effect=[open(input_file, "r"), open(output_file, "w")]),
+            patch(
+                "builtins.open",
+                side_effect=[open(input_file, "r"), open(output_file, "w")],
+            ),
             patch("json.load", return_value=pairs),
             patch("json.dump") as mock_dump,
         ):

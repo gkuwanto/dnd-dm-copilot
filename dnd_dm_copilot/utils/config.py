@@ -75,9 +75,7 @@ class Config:
             )
 
         if self.train_ratio + self.val_ratio > 1:
-            raise ConfigError(
-                f"train_ratio + val_ratio must be <= 1, got {self.train_ratio + self.val_ratio}"
-            )
+            raise ConfigError("train_ratio + val_ratio must be <= 1")
 
         if self.batch_size <= 0:
             raise ConfigError(f"batch_size must be positive, got {self.batch_size}")
@@ -100,7 +98,7 @@ def load_config(config_path: Optional[str] = None) -> Config:
         ConfigError: If required environment variables are missing
     """
     # Load from environment variables
-    config_dict: Dict[str, str] = {
+    config_dict: Dict[str, object] = {
         "hf_token": os.getenv("HF_TOKEN", ""),
         "deepseek_api_key": os.getenv("DEEPSEEK_API_KEY", ""),
         "wandb_api_key": os.getenv("WANDB_API_KEY", ""),
@@ -117,7 +115,7 @@ def load_config(config_path: Optional[str] = None) -> Config:
         except (IOError, json.JSONDecodeError) as e:
             raise ConfigError(f"Failed to load config file '{config_path}': {e}")
 
-    return Config(**config_dict)
+    return Config(**config_dict)  # type: ignore
 
 
 def validate_environment() -> Dict[str, str]:

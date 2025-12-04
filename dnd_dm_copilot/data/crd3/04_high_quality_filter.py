@@ -190,7 +190,7 @@ def filter_high_quality_pairs(
     return top_pairs
 
 
-def print_quality_analysis(pairs: List[Dict]):
+def print_quality_analysis(pairs: List[Dict]) -> None:
     """Print analysis of selected pairs"""
     narration_count = sum(1 for p in pairs if has_dm_narration(p["passage"]))
     rules_count = sum(1 for p in pairs if has_rules_content(p["passage"]))
@@ -198,18 +198,20 @@ def print_quality_analysis(pairs: List[Dict]):
     avg_query_len = sum(len(p["query"].split()) for p in pairs) / len(pairs)
     avg_passage_len = sum(len(p["passage"].split()) for p in pairs) / len(pairs)
 
-    print(f"\nQuality Analysis:")
+    print("\nQuality Analysis:")
     print(
-        f"  Pairs with DM narration: {narration_count:,} ({narration_count / len(pairs) * 100:.1f}%)"
+        f"  Pairs with DM narration: {narration_count:,}"
+        f" ({narration_count / len(pairs) * 100:.1f}%)"
     )
     print(
-        f"  Pairs with rules content: {rules_count:,} ({rules_count / len(pairs) * 100:.1f}%)"
+        f"  Pairs with rules content: {rules_count:,}"
+        f" ({rules_count / len(pairs) * 100:.1f}%)"
     )
     print(f"  Average query length: {avg_query_len:.1f} words")
     print(f"  Average passage length: {avg_passage_len:.1f} words")
 
 
-def main():
+def main() -> None:
     input_file = "crd3_training_pairs_dm_only.json"
     output_file = "crd3_training_pairs_high_quality.json"
     target_count = 40000
@@ -227,7 +229,8 @@ def main():
     print(f"\n{'=' * 60}")
     print(f"Selected {len(high_quality_pairs):,} highest quality pairs")
     print(
-        f"Reduction: {len(dm_pairs):,} → {len(high_quality_pairs):,} ({len(high_quality_pairs) / len(dm_pairs) * 100:.1f}%)"
+        f"Reduction: {len(dm_pairs):,} → {len(high_quality_pairs):,}"
+        f" ({len(high_quality_pairs) / len(dm_pairs) * 100:.1f}%)"
     )
     print(f"{'=' * 60}")
 

@@ -8,7 +8,7 @@ import json
 import os
 
 
-def extract_dm_pairs(input_file: str, output_file: str):
+def extract_dm_pairs(input_file: str, output_file: str) -> None:
     """Extract only pairs where the passage is a DM response"""
     print(f"Loading data from {input_file}...")
     with open(input_file, "r", encoding="utf-8") as f:
@@ -20,7 +20,8 @@ def extract_dm_pairs(input_file: str, output_file: str):
     dm_pairs = [p for p in all_pairs if "DM responds:" in p["passage"]]
 
     print(
-        f"\nExtracted {len(dm_pairs):,} DM response pairs ({len(dm_pairs) / len(all_pairs) * 100:.1f}%)"
+        f"\nExtracted {len(dm_pairs):,} DM response "
+        f"pairs ({len(dm_pairs) / len(all_pairs) * 100:.1f}%)"
     )
 
     # Calculate statistics
@@ -55,7 +56,7 @@ def extract_dm_pairs(input_file: str, output_file: str):
         print(f"Passage: {sample['passage'][:200]}...")
 
 
-def main():
+def main() -> None:
     input_file = "crd3_training_pairs_filtered.json"
     output_file = "crd3_training_pairs_dm_only.json"
 

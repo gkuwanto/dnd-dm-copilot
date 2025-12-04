@@ -4,13 +4,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List
 
-from dnd_dm_copilot.utils import save_json_pairs, load_config, upload_to_huggingface
+from dnd_dm_copilot.utils import load_config, save_json_pairs, upload_to_huggingface
 
 logger = logging.getLogger(__name__)
 
 
 class DataProcessingError(Exception):
     """Custom exception for data processing errors."""
+
     pass
 
 
@@ -45,7 +46,10 @@ class BaseDataProcessor(ABC):
 
     @abstractmethod
     def process_data(self, raw_data: Any) -> List[Dict[str, str]]:
-        """Process raw data into query-passage pairs. Must be implemented by subclasses."""
+        """
+        Process raw data into query-passage pairs.
+        Must be implemented by subclasses.
+        """
         pass
 
     def validate_pairs(self, pairs: List[Dict[str, str]]) -> None:

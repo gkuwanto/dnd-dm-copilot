@@ -35,21 +35,33 @@ MAX_RETRIES = 3
 CHECKPOINT_INTERVAL = 50  # Save checkpoint every N chunks
 CONCURRENT_REQUESTS = 10  # Number of concurrent API calls
 
-SYSTEM_PROMPT = """You are helping create training data for a D&D Dungeon Master copilot system.
+SYSTEM_PROMPT = """
+You are helping create training data for a D&D Dungeon Master copilot system.
 The copilot helps DMs search through their campaign notes during gameplay.
 
-Your task: Given a passage from DM campaign notes, generate exactly 5 questions that a DM might ask
+Your task:
+Given a passage from DM campaign notes,
+generate exactly 5 questions that a DM might ask
 when they need to retrieve this specific information during a game session.
 
 Guidelines:
 - Questions should be natural and conversational
-- Questions should reflect real gameplay scenarios (e.g., "What was the NPC's name?", "Which faction does this character belong to?")
-- Cover different aspects: characters, plot, world-building, relationships, mechanics
+- Questions should reflect real gameplay scenarios
+    (e.g., "What was the NPC's name?",
+        "Which faction does this character belong to?")
+- Cover different aspects: characters, plot,
+    world-building, relationships, mechanics
 - Vary question complexity and specificity
 - Return ONLY a JSON array of 5 strings, nothing else
 
 Example output format:
-["What was the name of the cleric's uncle?", "Which clan does Barhador belong to?", "What is the Eglan sect?", "Who is Barhador's mother?", "What deity does the war cleric worship?"]
+[
+    "What was the name of the cleric's uncle?",
+    "Which clan does Barhador belong to?",
+    "What is the Eglan sect?",
+    "Who is Barhador's mother?",
+    "What deity does the war cleric worship?"
+]
 """
 
 
@@ -115,7 +127,8 @@ def load_checkpoint() -> Tuple[List[Dict[str, str]], int]:
                 pairs = checkpoint.get("pairs", [])
                 last_index = checkpoint.get("last_index", -1)
                 print(
-                    f"Resuming from checkpoint: {last_index + 1} chunks already processed, {len(pairs)} pairs"
+                    f"Resuming from checkpoint: {last_index + 1}"
+                    f" chunks already processed, {len(pairs)} pairs"
                 )
                 return pairs, last_index
         except Exception as e:
@@ -151,7 +164,8 @@ async def generate_queries_for_chunk_async(
 
 {chunk}
 
-Generate exactly 5 questions a DM would ask to find this passage. Return only a JSON array of strings.""",
+Generate exactly 5 questions a DM would ask to find this passage.
+Return only a JSON array of strings.""",
                         },
                     ],
                     temperature=0.7,
@@ -160,6 +174,8 @@ Generate exactly 5 questions a DM would ask to find this passage. Return only a 
 
                 # Parse response
                 content = response.choices[0].message.content
+                if not content:
+                    continue
                 questions = parse_response(content)
                 if questions:
                     return chunk_index, questions
@@ -218,7 +234,8 @@ async def create_training_pairs_async(
         # Progress update
         if completed % 10 == 0:
             print(
-                f"Processed {start_index + 1 + completed}/{total_chunks} chunks ({len(pairs)} pairs)"
+                f"Processed {start_index + 1 + completed}/{total_chunks}"
+                f" chunks ({len(pairs)} pairs)"
             )
 
         # Checkpoint save
@@ -253,7 +270,7 @@ def upload_to_huggingface(filepath: str, repo_name: str, token: str) -> None:
     )
 
 
-async def main_async():
+async def main_async() -> None:
     """Main execution (async)."""
     print("=" * 60)
     print("Reddit Notes Ingestion Pipeline (Async + Checkpointing)")
@@ -285,7 +302,8 @@ async def main_async():
     else:
         # Generate pairs
         print(
-            f"\nGenerating queries for {len(chunks) - last_index - 1} remaining chunks..."
+            f"\nGenerating queries for {len(chunks) - last_index - 1}"
+            " remaining chunks..."
         )
         print(f"Using {CONCURRENT_REQUESTS} concurrent requests")
         pairs = await create_training_pairs_async(
@@ -315,7 +333,7 @@ async def main_async():
     print("=" * 60)
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     asyncio.run(main_async())
 

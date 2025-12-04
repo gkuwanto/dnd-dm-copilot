@@ -1,8 +1,6 @@
 """Tests for CRD3 filter_data processor."""
 
-from unittest.mock import mock_open, patch
-
-import pytest
+from unittest.mock import patch
 
 # Import module with numeric prefix using __import__
 filter_module = __import__(

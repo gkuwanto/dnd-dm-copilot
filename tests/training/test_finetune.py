@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dnd_dm_copilot.training.finetune import (
-    load_dataset,
-    split_dataset,
     create_model,
-    prepare_training_data,
+    load_dataset,
     prepare_ir_evaluator,
+    prepare_training_data,
+    split_dataset,
 )
 
 
@@ -74,7 +74,9 @@ class TestSplitDataset:
         train, val, test = split_dataset(sample_query_passage_pairs)
 
         total = len(sample_query_passage_pairs)
-        # With small datasets, exact ratios aren't always possible, so use larger tolerance
+        # With small datasets,
+        # exact ratios aren't always possible,
+        # so use larger tolerance
         assert len(train) / total == pytest.approx(0.8, abs=0.1)
         assert len(val) / total == pytest.approx(0.1, abs=0.1)
         assert len(test) / total == pytest.approx(0.1, abs=0.1)
