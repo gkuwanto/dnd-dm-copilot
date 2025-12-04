@@ -170,7 +170,7 @@ def prepare_training_data(
     for item in train_data:
         train_examples.append(InputExample(texts=[item["query"], item["passage"]]))
 
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=batch_size)  # type: ignore
+    train_dataloader = DataLoader(train_examples, batch_size=batch_size)  # type: ignore
 
     print(f"Created {len(train_examples)} training examples")
     return train_dataloader
@@ -269,13 +269,14 @@ def train_model(
 
     # Log training configuration to wandb
     if use_wandb:
+        train_examples = len(train_dataloader.dataset)  # type: ignore
         wandb.log(
             {
                 "training/total_steps": total_steps,
                 "training/warmup_steps": warmup_steps,
                 "training/evaluation_steps": evaluation_steps,
                 "training/batch_size": train_dataloader.batch_size,
-                "training/train_examples": len(train_dataloader.dataset),  # type: ignore
+                "training/train_examples": train_examples,
             }
         )
 
