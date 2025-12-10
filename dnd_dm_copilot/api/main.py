@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,7 +19,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, Any]:
     """
     Lifespan context manager for startup and shutdown events.
 
@@ -89,7 +90,7 @@ if static_path.exists():
 
 
 @app.get("/")
-async def root():
+async def root() -> RedirectResponse:
     """Redirect root to demo page."""
     return RedirectResponse(url="/demo/")
 

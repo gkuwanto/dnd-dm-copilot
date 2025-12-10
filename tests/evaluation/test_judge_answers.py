@@ -1,6 +1,6 @@
 """Tests for LLM-based answer judging."""
 
-import asyncio
+import asyncio  # noqa: F401
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -171,9 +171,9 @@ class TestAnswerJudge:
         ]:
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[
-                0
-            ].message.content = f"{verdict}\nConfidence: {conf}\nReasoning: {reason}"
+            mock_response.choices[0].message.content = (
+                f"{verdict}\nConfidence: {conf}\nReasoning: {reason}"
+            )
             mock_responses.append(mock_response)
 
         mock_async_client = MagicMock()
@@ -213,15 +213,15 @@ class TestAnswerJudge:
         # Mock responses with an error in the middle
         mock_response1 = MagicMock()
         mock_response1.choices = [MagicMock()]
-        mock_response1.choices[
-            0
-        ].message.content = "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        mock_response1.choices[0].message.content = (
+            "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        )
 
         mock_response2 = MagicMock()
         mock_response2.choices = [MagicMock()]
-        mock_response2.choices[
-            0
-        ].message.content = "INCORRECT\nConfidence: 0.85\nReasoning: Bad"
+        mock_response2.choices[0].message.content = (
+            "INCORRECT\nConfidence: 0.85\nReasoning: Bad"
+        )
 
         mock_async_client = MagicMock()
         mock_async_client.chat.completions.create = AsyncMock(
@@ -303,9 +303,7 @@ class TestAnswerJudge:
         # Mock the async client
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[
-            0
-        ].message.content = (
+        mock_response.choices[0].message.content = (
             "CORRECT\nConfidence: 0.95\nReasoning: The answer is accurate."
         )
 
@@ -342,9 +340,7 @@ class TestAnswerJudge:
         # Mock the async client
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[
-            0
-        ].message.content = (
+        mock_response.choices[0].message.content = (
             "INCORRECT\nConfidence: 0.85\nReasoning: The answer is wrong."
         )
 
@@ -379,9 +375,9 @@ class TestAnswerJudge:
         for i, verdict in enumerate(["CORRECT", "INCORRECT"]):
             mock_response = MagicMock()
             mock_response.choices = [MagicMock()]
-            mock_response.choices[
-                0
-            ].message.content = f"{verdict}\nConfidence: 0.9{i}\nReasoning: Test {i}"
+            mock_response.choices[0].message.content = (
+                f"{verdict}\nConfidence: 0.9{i}\nReasoning: Test {i}"
+            )
             mock_responses.append(mock_response)
 
         mock_async_client = MagicMock()
@@ -424,15 +420,15 @@ class TestAnswerJudge:
         # Mock responses with an error in the middle
         mock_response1 = MagicMock()
         mock_response1.choices = [MagicMock()]
-        mock_response1.choices[
-            0
-        ].message.content = "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        mock_response1.choices[0].message.content = (
+            "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        )
 
         mock_response2 = MagicMock()
         mock_response2.choices = [MagicMock()]
-        mock_response2.choices[
-            0
-        ].message.content = "INCORRECT\nConfidence: 0.85\nReasoning: Bad"
+        mock_response2.choices[0].message.content = (
+            "INCORRECT\nConfidence: 0.85\nReasoning: Bad"
+        )
 
         mock_async_client = MagicMock()
         mock_async_client.chat.completions.create = AsyncMock(
@@ -479,9 +475,9 @@ class TestAnswerJudge:
         # Mock the async client
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[
-            0
-        ].message.content = "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        mock_response.choices[0].message.content = (
+            "CORRECT\nConfidence: 0.95\nReasoning: Good"
+        )
 
         mock_async_client = MagicMock()
         mock_async_client.chat.completions.create = AsyncMock(

@@ -40,7 +40,7 @@ def load_rag_results(results_file: str) -> List[Dict[str, Any]]:
         raise FileNotFoundError(f"RAG results file not found: {results_file}")
 
     with open(results_path, "r", encoding="utf-8") as f:
-        results = json.load(f)
+        results: List[Dict[str, Any]] = json.load(f)
 
     logger.info(f"Loaded {len(results)} results from {results_file}")
     return results

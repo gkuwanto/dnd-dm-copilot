@@ -109,11 +109,11 @@ class RAGPipelineRunner:
 
         # Initialize retriever only if RAG is enabled
         if top_k > 0:
-            self.retriever = FAISSRetriever(model_path=model_path)
-            self.retriever.load_index(index_path)
+            self.retriever = FAISSRetriever(model_path=model_path)  # type: ignore
+            self.retriever.load_index(index_path)  # type: ignore
             logger.info(f"RAG enabled with top_k={top_k}")
         else:
-            self.retriever = None
+            self.retriever = None  # type: ignore
             logger.info("RAG disabled (top_k=0) - baseline mode")
 
         # Initialize LLM client
@@ -133,7 +133,8 @@ class RAGPipelineRunner:
                 - question: Original question
                 - ground_truth_answer: Expected answer
                 - source_passage: Source passage text
-                - retrieved_passages: List of retrieved passages with scores (empty if top_k=0)
+                - retrieved_passages: List of retrieved
+                     passages with scores (empty if top_k=0)
                 - source_passage_rank: Rank of source passage (or None)
                 - generated_answer: LLM-generated answer
                 - metadata: Original metadata

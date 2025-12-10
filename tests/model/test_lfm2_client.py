@@ -26,6 +26,8 @@ class TestLFM2Client:
                 n_gpu_layers=-1,
                 n_ctx=4096,
                 verbose=False,
+                chat_format="chatml",
+                flash_attn=True,
             )
             assert client.model == mock_model
 
@@ -35,10 +37,16 @@ class TestLFM2Client:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
 
-            # Mock the model output
-            mock_model.return_value = {
+            # Mock the create_chat_completion output
+            mock_model.create_chat_completion.return_value = {
                 "choices": [
-                    {"text": "Divine Smite allows you to deal extra radiant damage."}
+                    {
+                        "message": {
+                            "content": (
+                                "Divine Smite allows you to deal extra radiant damage."
+                            )
+                        }
+                    }
                 ]
             }
 
@@ -52,15 +60,18 @@ class TestLFM2Client:
 
             result = client.generate(query=query, context=context)
 
-            # Verify generation was called
-            assert mock_model.call_count == 1
-            call_args = mock_model.call_args
+            # Verify create_chat_completion was called
+            assert mock_model.create_chat_completion.call_count == 1
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
 
-            # Verify prompt contains query and context
-            prompt = call_args[0][0]
-            assert query in prompt
-            assert context[0] in prompt
-            assert context[1] in prompt
+            # Verify messages contain query and context
+            messages = call_kwargs["messages"]
+            assert len(messages) == 2
+            assert messages[0]["role"] == "system"
+            assert messages[1]["role"] == "user"
+            assert query in messages[1]["content"]
+            assert context[0] in messages[1]["content"]
+            assert context[1] in messages[1]["content"]
 
             # Verify result
             assert result == "Divine Smite allows you to deal extra radiant damage."
@@ -70,12 +81,14 @@ class TestLFM2Client:
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             client.generate(query="test", context=[], temperature=0.7)
 
-            call_kwargs = mock_model.call_args[1]
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
             assert call_kwargs["temperature"] == 0.7
 
     def test_generate_with_max_tokens(self) -> None:
@@ -83,20 +96,24 @@ class TestLFM2Client:
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             client.generate(query="test", context=[], max_tokens=256)
 
-            call_kwargs = mock_model.call_args[1]
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
             assert call_kwargs["max_tokens"] == 256
 
     def test_generate_formats_prompt_correctly(self) -> None:
-        """Test that prompt is formatted with context and query."""
+        """Test that messages are formatted with context and query."""
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
 
@@ -105,33 +122,42 @@ class TestLFM2Client:
 
             client.generate(query=query, context=context)
 
-            prompt = mock_model.call_args[0][0]
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
+            messages = call_kwargs["messages"]
 
-            # Verify context appears before query
-            context_pos = prompt.find(context[0])
-            query_pos = prompt.find(query)
-            assert context_pos < query_pos
-            assert "Use the following context" in prompt or "Context:" in prompt
+            # Verify system message contains assistant role info
+            assert "Dungeon Master" in messages[0]["content"]
+
+            # Verify user message contains context and query
+            user_content = messages[1]["content"]
+            assert "Context:" in user_content
+            assert context[0] in user_content
+            assert context[1] in user_content
+            assert query in user_content
 
     def test_generate_handles_empty_context(self) -> None:
         """Test generation with empty context list."""
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             result = client.generate(query="test query", context=[])
 
             assert result == "answer"
-            assert mock_model.call_count == 1
+            assert mock_model.create_chat_completion.call_count == 1
 
     def test_generate_strips_whitespace(self) -> None:
         """Test that generated text is stripped of whitespace."""
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "  answer with spaces  "}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "  answer with spaces  "}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             result = client.generate(query="test", context=[])
@@ -143,12 +169,14 @@ class TestLFM2Client:
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             client.generate(query="test", context=[], stop=["</s>", "\n\nQuestion:"])
 
-            call_kwargs = mock_model.call_args[1]
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
             assert call_kwargs["stop"] == ["</s>", "\n\nQuestion:"]
 
     def test_init_raises_error_for_missing_model(self) -> None:
@@ -164,11 +192,43 @@ class TestLFM2Client:
         with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
             mock_model = MagicMock()
             mock_llama.return_value = mock_model
-            mock_model.return_value = {"choices": [{"text": "answer"}]}
+            mock_model.create_chat_completion.return_value = {
+                "choices": [{"message": {"content": "answer"}}]
+            }
 
             client = LFM2Client(model_path="models/test.gguf")
             client.generate(query="test", context=[], top_p=0.9, top_k=40)
 
-            call_kwargs = mock_model.call_args[1]
+            call_kwargs = mock_model.create_chat_completion.call_args[1]
             assert call_kwargs["top_p"] == 0.9
             assert call_kwargs["top_k"] == 40
+
+    def test_create_messages_with_context(self) -> None:
+        """Test _create_messages method with context."""
+        with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
+            mock_llama.return_value = MagicMock()
+
+            client = LFM2Client(model_path="models/test.gguf")
+            messages = client._create_messages(
+                query="What is AC?",
+                context=["AC stands for Armor Class."],
+            )
+
+            assert len(messages) == 2
+            assert messages[0]["role"] == "system"
+            assert messages[1]["role"] == "user"
+            assert "Context:" in messages[1]["content"]
+            assert "Question:" in messages[1]["content"]
+
+    def test_create_messages_without_context(self) -> None:
+        """Test _create_messages method without context."""
+        with patch("dnd_dm_copilot.model.lfm2_client.Llama") as mock_llama:
+            mock_llama.return_value = MagicMock()
+
+            client = LFM2Client(model_path="models/test.gguf")
+            messages = client._create_messages(query="What is AC?", context=[])
+
+            assert len(messages) == 2
+            assert messages[0]["role"] == "system"
+            assert messages[1]["role"] == "user"
+            assert messages[1]["content"] == "What is AC?"

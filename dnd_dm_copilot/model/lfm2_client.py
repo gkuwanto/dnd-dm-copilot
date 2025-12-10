@@ -77,7 +77,8 @@ class LFM2Client:
                 "role": "system",
                 "content": (
                     "You are a helpful Dungeon Master assistant. "
-                    "Use the following context to answer questions about D&D rules and mechanics."
+                    "Use the following context to answer questions "
+                    "about D&D rules and mechanics."
                 ),
             }
             user_message = {
