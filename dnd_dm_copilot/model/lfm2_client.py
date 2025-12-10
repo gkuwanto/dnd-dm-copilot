@@ -23,8 +23,9 @@ class LFM2Client:
         self,
         model_path: str,
         n_gpu_layers: int = -1,
-        n_ctx: int = 4096,
+        n_ctx: int = 128000,
         verbose: bool = False,
+        chat_format: str = "chatml",
     ):
         """
         Initialize LFM2 client.
@@ -34,6 +35,7 @@ class LFM2Client:
             n_gpu_layers: Number of layers to offload to GPU (-1 for all)
             n_ctx: Context window size
             verbose: Enable verbose logging
+            chat_format: Chat format template (default: llama-2)
 
         Raises:
             ValueError: If model file not found
@@ -52,33 +54,44 @@ class LFM2Client:
             n_gpu_layers=n_gpu_layers,
             n_ctx=n_ctx,
             verbose=verbose,
+            chat_format=chat_format,
+            flash_attn=True,
         )
 
         logger.info("LFM2 model loaded successfully")
 
-    def _format_prompt(self, query: str, context: List[str]) -> str:
+    def _create_messages(self, query: str, context: List[str]) -> List[dict]:
         """
-        Format prompt with context and query for RAG.
+        Create chat messages with context and query for RAG.
 
         Args:
             query: User query
             context: List of context passages
 
         Returns:
-            Formatted prompt string
+            List of message dictionaries for chat completion
         """
         if context:
             context_str = "\n\n".join(context)
-            prompt = (
-                f"Use the following context to answer the question.\n\n"
-                f"Context:\n{context_str}\n\n"
-                f"Question: {query}\n\n"
-                f"Answer:"
-            )
+            system_message = {
+                "role": "system",
+                "content": (
+                    "You are a helpful Dungeon Master assistant. "
+                    "Use the following context to answer questions about D&D rules and mechanics."
+                ),
+            }
+            user_message = {
+                "role": "user",
+                "content": f"Context:\n{context_str}\n\nQuestion: {query}",
+            }
+            return [system_message, user_message]
         else:
-            prompt = f"Question: {query}\n\nAnswer:"
-
-        return prompt
+            system_message = {
+                "role": "system",
+                "content": "You are a helpful Dungeon Master assistant.",
+            }
+            user_message = {"role": "user", "content": query}
+            return [system_message, user_message]
 
     def generate(
         self,
@@ -105,24 +118,23 @@ class LFM2Client:
         Returns:
             Generated answer text
         """
-        prompt = self._format_prompt(query, context)
+        messages = self._create_messages(query, context)
 
         logger.debug(f"Generating answer for query: {query[:50]}...")
 
-        # Generate with llama-cpp-python
-        output = self.model(
-            prompt,
+        # Generate with create_chat_completion
+        output = self.model.create_chat_completion(
+            messages=messages,  # type: ignore
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
             top_k=top_k,
             stop=stop,
-            echo=False,
         )
+        self.model.reset()
 
-        # Extract generated text
-        # Note: output is a dict when stream=False (not an iterator)
-        generated_text: str = str(output["choices"][0]["text"]).strip()  # type: ignore[index] # noqa: E501
+        # Extract generated text from chat completion
+        generated_text: str = str(output["choices"][0]["message"]["content"]).strip()  # type: ignore[index] # noqa: E501
 
         logger.debug(f"Generated answer: {generated_text[:100]}...")
 

@@ -1,4 +1,4 @@
-.PHONY: help install test test-api test-eval test-data test-model test-all lint format type-check quality-check clean dev-setup run-api evaluate-full evaluate-questions evaluate-rag evaluate-judge
+.PHONY: help install test test-api test-eval test-data test-model test-all lint format type-check quality-check clean dev-setup run-api evaluate-full evaluate-full-baseline evaluate-questions evaluate-rag evaluate-baseline evaluate-judge evaluate-judge-baseline
 
 # Default target
 .DEFAULT_GOAL := help
@@ -20,6 +20,7 @@ help: ## Show this help message
 install: ## Install all dependencies
 	@echo "$(BLUE)Installing dependencies...$(NC)"
 	uv sync
+	uv pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
 	@echo "$(GREEN)✓ Dependencies installed$(NC)"
 
 dev-setup: install ## Complete development environment setup
@@ -122,7 +123,7 @@ train-custom: ## Train with custom parameters (edit this target as needed)
 		--dataset data/processed/dnd-mechanics-dataset.json \
 		--output_dir models/sbert/ \
 		--batch_size 64 \
-		--num_epochs 10 \
+		--num_epochs 1 \
 		--evaluation_steps 50 \
 		--wandb_project "dnd-dm-copilot" \
 		--wandb_run_name "custom-run"
@@ -144,9 +145,24 @@ build-index: ## Build FAISS index from corpus
 	fi
 	uv run python -m scripts.build_index \
 		--corpus $(CORPUS) \
-		--model models/mechanics-retrieval \
+		--model models/sbert \
 		--output data/indices/mechanics/
 	@echo "$(GREEN)✓ FAISS index built: data/indices/mechanics/$(NC)"
+
+compare-models: ## Compare baseline vs fine-tuned model performance
+	@echo "$(BLUE)Comparing baseline vs fine-tuned model...$(NC)"
+	@if [ -z "$(CORPUS)" ]; then \
+		echo "$(RED)Error: CORPUS not specified$(NC)"; \
+		echo "Usage: make compare-models CORPUS=data/processed/corpus.json"; \
+		exit 1; \
+	fi
+	uv run python -m scripts.compare_models \
+		--corpus $(CORPUS) \
+		--qa_triplets data/evaluation/qa_triplets.json \
+		--baseline_model sentence-transformers/all-MiniLM-L6-v2 \
+		--finetuned_model models/sbert \
+		--output data/evaluation/model_comparison.json
+	@echo "$(GREEN)✓ Comparison complete: data/evaluation/model_comparison.json$(NC)"
 
 evaluate-questions: ## Step 1: Generate evaluation questions from corpus
 	@echo "$(BLUE)Generating evaluation questions (50 concurrent requests)...$(NC)"
@@ -179,13 +195,40 @@ evaluate-rag: ## Step 2: Run RAG pipeline on questions
 		--skip_errors
 	@echo "$(GREEN)✓ RAG results saved: data/evaluation/rag_results.json$(NC)"
 
+evaluate-baseline: ## Step 2: Run baseline (no RAG) on questions
+	@echo "$(BLUE)Running baseline evaluation (no RAG)...$(NC)"
+	@if [ -z "$(LFM2_MODEL)" ]; then \
+		echo "$(RED)Error: LFM2_MODEL not specified$(NC)"; \
+		echo "Usage: make evaluate-baseline LFM2_MODEL=path/to/model.gguf"; \
+		exit 1; \
+	fi
+	uv run -m dnd_dm_copilot.evaluation.run_rag_pipeline \
+		--qa_triplets data/evaluation/qa_triplets.json \
+		--model_path models/sbert/ \
+		--index_path data/indices/mechanics/ \
+		--llm_model_path $(LFM2_MODEL) \
+		--top_k 0 \
+		--output data/evaluation/baseline_results.json \
+		--skip_errors
+	@echo "$(GREEN)✓ Baseline results saved: data/evaluation/baseline_results.json$(NC)"
+
 evaluate-judge: ## Step 3: Judge answers with LLM
 	@echo "$(BLUE)Judging generated answers...$(NC)"
 	uv run -m dnd_dm_copilot.evaluation.judge_answers \
 		--results data/evaluation/rag_results.json \
 		--output data/evaluation/judgments.json \
+		--max_concurrent 50 \
 		--skip_errors
 	@echo "$(GREEN)✓ Judgments saved: data/evaluation/judgments.json$(NC)"
+
+evaluate-judge-baseline: ## Step 3: Judge baseline answers with LLM
+	@echo "$(BLUE)Judging baseline answers...$(NC)"
+	uv run -m dnd_dm_copilot.evaluation.judge_answers \
+		--results data/evaluation/baseline_results.json \
+		--output data/evaluation/baseline_judgments.json \
+		--max_concurrent 50 \
+		--skip_errors
+	@echo "$(GREEN)✓ Baseline judgments saved: data/evaluation/baseline_judgments.json$(NC)"
 
 evaluate-full: ## Run complete evaluation pipeline (all 3 steps)
 	@echo "$(BLUE)Running full evaluation pipeline...$(NC)"
@@ -202,6 +245,22 @@ evaluate-full: ## Run complete evaluation pipeline (all 3 steps)
 	@echo "  - Questions: data/evaluation/qa_triplets.json"
 	@echo "  - RAG Results: data/evaluation/rag_results.json"
 	@echo "  - Judgments: data/evaluation/judgments.json"
+
+evaluate-full-baseline: ## Run complete baseline evaluation pipeline (no RAG)
+	@echo "$(BLUE)Running full baseline evaluation pipeline (no RAG)...$(NC)"
+	@if [ -z "$(CORPUS)" ] || [ -z "$(LFM2_MODEL)" ]; then \
+		echo "$(RED)Error: Required parameters not specified$(NC)"; \
+		echo "Usage: make evaluate-full-baseline CORPUS=data/processed/5e_corpus.json LFM2_MODEL=path/to/model.gguf"; \
+		exit 1; \
+	fi
+	@$(MAKE) evaluate-questions CORPUS=$(CORPUS)
+	@$(MAKE) evaluate-baseline LFM2_MODEL=$(LFM2_MODEL)
+	@$(MAKE) evaluate-judge-baseline
+	@echo "$(GREEN)✓ Full baseline evaluation complete!$(NC)"
+	@echo "$(YELLOW)Results:$(NC)"
+	@echo "  - Questions: data/evaluation/qa_triplets.json"
+	@echo "  - Baseline Results: data/evaluation/baseline_results.json"
+	@echo "  - Baseline Judgments: data/evaluation/baseline_judgments.json"
 
 # ==================== API Server ====================
 
@@ -306,7 +365,7 @@ push-model: ## Push model to Hugging Face Hub (requires HF_TOKEN)
 		exit 1; \
 	fi
 	uv run python -m scripts.push_to_hub \
-		--model_path models/mechanics-retrieval \
+		--model_path models/sbert \
 		--repo_id $(REPO_ID)
 	@echo "$(GREEN)✓ Model pushed to https://huggingface.co/$(REPO_ID)$(NC)"
 
@@ -318,7 +377,7 @@ push-model-private: ## Push model as private repository
 		exit 1; \
 	fi
 	uv run python -m scripts.push_to_hub \
-		--model_path models/mechanics-retrieval \
+		--model_path models/sbert \
 		--repo_id $(REPO_ID) \
 		--private
 	@echo "$(GREEN)✓ Private model pushed to https://huggingface.co/$(REPO_ID)$(NC)"

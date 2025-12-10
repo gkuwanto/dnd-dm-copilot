@@ -6,12 +6,13 @@ compared to ground truth answers.
 """
 
 import argparse
+import asyncio
 import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from tqdm import tqdm  # type: ignore
+from tqdm.asyncio import tqdm as atqdm  # type: ignore
 
 from dnd_dm_copilot.model.llm_client import DeepSeekClient
 
@@ -39,7 +40,7 @@ def load_rag_results(results_file: str) -> List[Dict[str, Any]]:
         raise FileNotFoundError(f"RAG results file not found: {results_file}")
 
     with open(results_path, "r", encoding="utf-8") as f:
-        results: List[Dict[str, Any]] = json.load(f)
+        results = json.load(f)
 
     logger.info(f"Loaded {len(results)} results from {results_file}")
     return results
@@ -86,7 +87,10 @@ Confidence: <0.0 to 1.0>
 Reasoning: <brief explanation>"""
 
     def __init__(
-        self, api_key: Optional[str] = None, model: str = "deepseek-chat"
+        self,
+        api_key: Optional[str] = None,
+        model: str = "deepseek-chat",
+        max_concurrent: int = 50,
     ) -> None:
         """
         Initialize answer judge.
@@ -94,9 +98,12 @@ Reasoning: <brief explanation>"""
         Args:
             api_key: DeepSeek API key (uses DEEPSEEK_API_KEY env var if None)
             model: Model name to use for judging
+            max_concurrent: Maximum concurrent API calls
         """
         self.client = DeepSeekClient(api_key=api_key)
+        self.async_client = self.client.get_async_client()
         self.model = model
+        self.semaphore = asyncio.Semaphore(max_concurrent)
 
     def judge_answer(self, result: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -194,11 +201,113 @@ Reasoning: <brief explanation>"""
 
         return verdict, confidence, reasoning
 
+    async def judge_answer_async(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Judge a single answer (async version).
+
+        Args:
+            result: Dict with 'question', 'ground_truth_answer',
+                   'generated_answer', and 'source_passage' fields
+
+        Returns:
+            Dict with:
+                - question: Original question
+                - ground_truth_answer: Expected answer
+                - generated_answer: LLM-generated answer
+                - correct: Boolean judgment
+                - confidence: Float 0.0-1.0
+                - reasoning: Explanation string
+
+        Raises:
+            ValueError: If LLM response cannot be parsed
+            Exception: If API call fails
+        """
+        prompt = self.PROMPT_TEMPLATE.format(
+            question=result["question"],
+            ground_truth_answer=result["ground_truth_answer"],
+            generated_answer=result["generated_answer"],
+            source_passage=result["source_passage"],
+        )
+        messages = [{"role": "user", "content": prompt}]
+
+        async with self.semaphore:
+            try:
+                response = await self.async_client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,  # type: ignore
+                    temperature=0.0,
+                    max_tokens=256,
+                )
+
+                content = response.choices[0].message.content
+                if not isinstance(content, str):
+                    content = str(content)
+
+                # Parse response
+                correct, confidence, reasoning = self._parse_judgment(content)
+
+                return {
+                    "question": result["question"],
+                    "ground_truth_answer": result["ground_truth_answer"],
+                    "generated_answer": result["generated_answer"],
+                    "correct": correct,
+                    "confidence": confidence,
+                    "reasoning": reasoning,
+                }
+
+            except Exception as e:
+                logger.error(
+                    "Failed to judge answer for question '%s': %s",
+                    result["question"],
+                    e,
+                )
+                raise
+
+    async def judge_batch_async(
+        self, results: List[Dict[str, Any]], skip_errors: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Judge a batch of answers (async with concurrency).
+
+        Args:
+            results: List of result dictionaries
+            skip_errors: If True, continue on errors; if False, raise on first error
+
+        Returns:
+            List of judgment dictionaries
+        """
+
+        async def process_result(result: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            try:
+                return await self.judge_answer_async(result)
+            except Exception as e:
+                logger.error(f"Error judging answer for '{result['question']}': {e}")
+                if not skip_errors:
+                    raise
+                return None
+
+        # Create tasks for all results
+        tasks = [process_result(r) for r in results]
+
+        # Run with progress bar
+        judgments = []
+        for coro in atqdm(
+            asyncio.as_completed(tasks),
+            total=len(tasks),
+            desc="Judging answers",
+        ):
+            result = await coro
+            if result is not None:
+                judgments.append(result)
+
+        logger.info(f"Judged {len(judgments)} answers")
+        return judgments
+
     def judge_batch(
         self, results: List[Dict[str, Any]], skip_errors: bool = False
     ) -> List[Dict[str, Any]]:
         """
-        Judge a batch of answers.
+        Judge a batch of answers (synchronous wrapper).
 
         Args:
             results: List of result dictionaries
@@ -207,19 +316,8 @@ Reasoning: <brief explanation>"""
         Returns:
             List of judgment dictionaries
         """
-        judgments = []
-
-        for result in tqdm(results, desc="Judging answers"):
-            try:
-                judgment = self.judge_answer(result)
-                judgments.append(judgment)
-            except Exception as e:
-                logger.error(f"Error judging answer for '{result['question']}': {e}")
-                if not skip_errors:
-                    raise
-
-        logger.info(f"Judged {len(judgments)} answers")
-        return judgments
+        # Run async version
+        return asyncio.run(self.judge_batch_async(results, skip_errors))
 
 
 def main() -> None:
@@ -244,6 +342,12 @@ def main() -> None:
         action="store_true",
         help="Continue processing on errors instead of stopping",
     )
+    parser.add_argument(
+        "--max_concurrent",
+        type=int,
+        default=50,
+        help="Maximum concurrent API calls (default: 50)",
+    )
 
     args = parser.parse_args()
 
@@ -253,7 +357,10 @@ def main() -> None:
         results = load_rag_results(args.results)
 
         # Initialize judge
-        judge = AnswerJudge()
+        logger.info(
+            f"Initializing judge with {args.max_concurrent} concurrent requests..."
+        )
+        judge = AnswerJudge(max_concurrent=args.max_concurrent)
 
         # Judge answers
         logger.info("Judging answers...")

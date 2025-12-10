@@ -50,9 +50,22 @@ async def query_mechanics(
 
     result = generator.generate(query=request.query, top_k=request.top_k)
 
+    # Convert retriever passages to Passage schema format
+    from dnd_dm_copilot.api.models.schemas import Passage
+
+    passages = [
+        Passage(
+            text=p["text"],
+            score=p["score"],
+            source=p.get("metadata", {}).get("source", "unknown"),
+            metadata=p.get("metadata", {}),
+        )
+        for p in result["passages"]
+    ]
+
     return QueryResponse(
         query=result["query"],
-        passages=result["passages"],
+        passages=passages,
         answer=result["answer"],
         retrieval_model="fine-tuned-minilm",
     )

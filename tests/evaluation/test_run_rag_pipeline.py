@@ -125,6 +125,26 @@ class TestRAGPipelineRunner:
         mock_retriever_class.assert_called_once_with(model_path="models/sbert/")
         mock_llm_class.assert_called_once_with(model_path="models/lfm2.gguf")
         assert runner.top_k == 10
+        assert runner.retriever is not None
+
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.FAISSRetriever")
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.LFM2Client")
+    def test_init_baseline_mode(
+        self, mock_llm_class: MagicMock, mock_retriever_class: MagicMock
+    ) -> None:
+        """Test initialization with top_k=0 for baseline mode."""
+        runner = RAGPipelineRunner(
+            model_path="models/sbert/",
+            index_path="data/indices/mechanics/",
+            llm_model_path="models/lfm2.gguf",
+            top_k=0,
+        )
+
+        # Retriever should not be initialized in baseline mode
+        mock_retriever_class.assert_not_called()
+        mock_llm_class.assert_called_once_with(model_path="models/lfm2.gguf")
+        assert runner.top_k == 0
+        assert runner.retriever is None
 
     @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.FAISSRetriever")
     @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.LFM2Client")
@@ -242,6 +262,89 @@ class TestRAGPipelineRunner:
         assert len(results) == 2
         assert results[0]["question"] == "Q1?"
         assert results[1]["question"] == "Q3?"
+
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.FAISSRetriever")
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.LFM2Client")
+    def test_run_single_query_baseline_mode(
+        self, mock_llm_class: MagicMock, mock_retriever_class: MagicMock
+    ) -> None:
+        """Test running pipeline in baseline mode (no RAG, top_k=0)."""
+        # Setup mock LLM
+        mock_llm = MagicMock()
+        mock_llm.generate.return_value = "Generated answer without context"
+        mock_llm_class.return_value = mock_llm
+
+        runner = RAGPipelineRunner(
+            model_path="models/sbert/",
+            index_path="data/indices/mechanics/",
+            llm_model_path="models/lfm2.gguf",
+            top_k=0,
+        )
+
+        qa_triplet = {
+            "question": "How does Divine Smite work?",
+            "answer": "Divine Smite deals radiant damage.",
+            "passage": "Passage 1",
+            "metadata": {"source": "phb.pdf"},
+        }
+
+        result = runner.run_single_query(qa_triplet)
+
+        # Verify retriever was not called
+        mock_retriever_class.assert_not_called()
+
+        # Verify LLM was called with empty context
+        mock_llm.generate.assert_called_once_with(
+            query="How does Divine Smite work?",
+            context=[],
+            temperature=0.0,
+            max_tokens=512,
+        )
+
+        # Verify result structure
+        assert result["question"] == "How does Divine Smite work?"
+        assert result["ground_truth_answer"] == "Divine Smite deals radiant damage."
+        assert result["generated_answer"] == "Generated answer without context"
+        assert result["retrieved_passages"] == []
+        assert result["source_passage_rank"] is None
+        assert result["source_passage"] == "Passage 1"
+
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.FAISSRetriever")
+    @patch("dnd_dm_copilot.evaluation.run_rag_pipeline.LFM2Client")
+    def test_run_batch_baseline_mode(
+        self, mock_llm_class: MagicMock, mock_retriever_class: MagicMock
+    ) -> None:
+        """Test running batch in baseline mode (no RAG)."""
+        # Setup mock LLM
+        mock_llm = MagicMock()
+        mock_llm.generate.side_effect = ["Answer 1", "Answer 2"]
+        mock_llm_class.return_value = mock_llm
+
+        runner = RAGPipelineRunner(
+            model_path="models/sbert/",
+            index_path="data/indices/mechanics/",
+            llm_model_path="models/lfm2.gguf",
+            top_k=0,
+        )
+
+        qa_triplets = [
+            {"question": "Q1?", "answer": "A1", "passage": "P1", "metadata": {}},
+            {"question": "Q2?", "answer": "A2", "passage": "P2", "metadata": {}},
+        ]
+
+        results = runner.run_batch(qa_triplets)
+
+        # Verify retriever was never called
+        mock_retriever_class.assert_not_called()
+
+        # Verify results
+        assert len(results) == 2
+        assert results[0]["question"] == "Q1?"
+        assert results[0]["retrieved_passages"] == []
+        assert results[0]["source_passage_rank"] is None
+        assert results[1]["question"] == "Q2?"
+        assert results[1]["retrieved_passages"] == []
+        assert results[1]["source_passage_rank"] is None
 
 
 class TestSaveResults:

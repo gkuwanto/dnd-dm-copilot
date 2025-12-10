@@ -230,7 +230,7 @@ Generate a question-answer pair:"""
             try:
                 response = await self.async_client.chat.completions.create(
                     model=self.model,
-                    messages=messages,
+                    messages=messages,  # type: ignore
                     temperature=0.7,
                     max_tokens=512,
                 )

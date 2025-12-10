@@ -101,19 +101,25 @@ class RAGPipelineRunner:
             model_path: Path to sentence-transformer model
             index_path: Path to FAISS index directory
             llm_model_path: Path to LFM2 GGUF model file
-            top_k: Number of passages to retrieve
+            top_k: Number of passages to retrieve (0 disables RAG)
         """
         logger.info("Initializing RAG pipeline runner")
 
-        # Initialize retriever
-        self.retriever = FAISSRetriever(model_path=model_path)
-        self.retriever.load_index(index_path)
+        self.top_k = top_k
+
+        # Initialize retriever only if RAG is enabled
+        if top_k > 0:
+            self.retriever = FAISSRetriever(model_path=model_path)
+            self.retriever.load_index(index_path)
+            logger.info(f"RAG enabled with top_k={top_k}")
+        else:
+            self.retriever = None
+            logger.info("RAG disabled (top_k=0) - baseline mode")
 
         # Initialize LLM client
         self.llm_client = LFM2Client(model_path=llm_model_path)
 
-        self.top_k = top_k
-        logger.info(f"Pipeline initialized (top_k={top_k})")
+        logger.info("Pipeline initialized")
 
     def run_single_query(self, qa_triplet: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -127,7 +133,7 @@ class RAGPipelineRunner:
                 - question: Original question
                 - ground_truth_answer: Expected answer
                 - source_passage: Source passage text
-                - retrieved_passages: List of retrieved passages with scores
+                - retrieved_passages: List of retrieved passages with scores (empty if top_k=0)
                 - source_passage_rank: Rank of source passage (or None)
                 - generated_answer: LLM-generated answer
                 - metadata: Original metadata
@@ -135,15 +141,21 @@ class RAGPipelineRunner:
         question = qa_triplet["question"]
         logger.debug(f"Running query: {question}")
 
-        # Retrieve passages
-        retrieved_passages = self.retriever.search(query=question, top_k=self.top_k)
+        # Retrieve passages only if RAG is enabled
+        if self.top_k > 0:
+            retrieved_passages = self.retriever.search(  # type: ignore
+                query=question, top_k=self.top_k
+            )
+            source_passage = qa_triplet["passage"]
+            source_rank = find_passage_rank(source_passage, retrieved_passages)
+            context_texts = [p["text"] for p in retrieved_passages]
+        else:
+            # Baseline mode: no retrieval, no context
+            retrieved_passages = []
+            source_rank = None
+            context_texts = []
 
-        # Find rank of source passage
-        source_passage = qa_triplet["passage"]
-        source_rank = find_passage_rank(source_passage, retrieved_passages)
-
-        # Generate answer
-        context_texts = [p["text"] for p in retrieved_passages]
+        # Generate answer (with or without context)
         generated_answer = self.llm_client.generate(
             query=question, context=context_texts, temperature=0.0, max_tokens=512
         )
@@ -151,7 +163,7 @@ class RAGPipelineRunner:
         return {
             "question": question,
             "ground_truth_answer": qa_triplet["answer"],
-            "source_passage": source_passage,
+            "source_passage": qa_triplet["passage"],
             "retrieved_passages": retrieved_passages,
             "source_passage_rank": source_rank,
             "generated_answer": generated_answer,
@@ -222,7 +234,10 @@ def main() -> None:
         help="Path to LFM2 GGUF model file",
     )
     parser.add_argument(
-        "--top_k", type=int, default=10, help="Number of passages to retrieve"
+        "--top_k",
+        type=int,
+        default=10,
+        help="Number of passages to retrieve (set to 0 to disable RAG for baseline)",
     )
     parser.add_argument(
         "--skip_errors",

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D DM Copilot - Demo</title>
+    <style>
+        /* === FONTS === */
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap');
+
+        /* === GLOBAL STYLES === */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* === HEADER === */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #2d1810 0%, #1a1a1a 100%);
+            border-radius: 10px;
+            border: 2px solid #8b0000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: #f4e8d8;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #b0a090;
+            font-style: italic;
+        }
+
+        /* === CARD STYLES === */
+        .card {
+            background-color: #f4e8d8;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            color: #2d2d2d;
+            border: 1px solid #d4c4b4;
+        }
+
+        .card h2 {
+            font-family: 'Cinzel', serif;
+            color: #8b0000;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        /* === FORM STYLES === */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #2d2d2d;
+            font-size: 0.95rem;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #d4c4b4;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: 'Open Sans', sans-serif;
+            background-color: #ffffff;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #8b0000;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* === SLIDER === */
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #d4c4b4;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #8b0000;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #8b0000;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .slider-value {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #8b0000;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* === BUTTONS === */
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        .btn-primary {
+            background-color: #8b0000;
+            color: #f4e8d8;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #a50000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background-color: #ffffff;
+            color: #2d2d2d;
+            border: 2px solid #d4c4b4;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: #f4e8d8;
+            border-color: #8b0000;
+        }
+
+        /* === EXAMPLE QUERIES === */
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .example-label {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: block;
+            color: #2d2d2d;
+        }
+
+        /* === LOADING SPINNER === */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #d4c4b4;
+            border-top: 4px solid #8b0000;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #8b0000;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        /* === RESULTS === */
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .answer-section {
+            background: linear-gradient(135deg, #fff8e7 0%, #f4e8d8 100%);
+            border: 2px solid #8b0000;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .answer-section h3 {
+            font-family: 'Cinzel', serif;
+            color: #8b0000;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .answer-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #2d2d2d;
+        }
+
+        .passages-section h3 {
+            font-family: 'Cinzel', serif;
+            color: #8b0000;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+
+        .passage {
+            background-color: #ffffff;
+            border: 1px solid #d4c4b4;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .passage:hover {
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.15);
+            border-color: #8b0000;
+        }
+
+        .passage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e4d4c4;
+        }
+
+        .passage-number {
+            font-weight: 700;
+            color: #8b0000;
+            font-size: 1rem;
+        }
+
+        .passage-score {
+            background-color: #8b0000;
+            color: #f4e8d8;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .passage-text {
+            color: #2d2d2d;
+            line-height: 1.7;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .passage-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+
+        .passage-source {
+            font-weight: 600;
+        }
+
+        /* === METADATA === */
+        .metadata {
+            background-color: rgba(139, 0, 0, 0.05);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .metadata strong {
+            color: #8b0000;
+        }
+
+        /* === ERROR MESSAGES === */
+        .error {
+            display: none;
+            background-color: #ffebee;
+            border: 2px solid #c62828;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            color: #c62828;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .error strong {
+            font-weight: 700;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .examples {
+                flex-direction: column;
+            }
+
+            .btn-secondary {
+                width: 100%;
+            }
+
+            .passage-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+        }
+
+        /* === HIDDEN UTILITY === */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>⚔️ D&D DM Copilot</h1>
+            <p class="subtitle">AI-Powered Dungeon Master Assistant with Fine-Tuned Retrieval</p>
+        </header>
+
+        <!-- Query Form -->
+        <div class="card">
+            <h2>Ask a D&D Mechanics Question</h2>
+
+            <form id="queryForm">
+                <div class="form-group">
+                    <label for="queryInput">Your Question:</label>
+                    <textarea
+                        id="queryInput"
+                        placeholder="e.g., How does Divine Smite work?"
+                        required
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="topKSlider">Number of Passages to Retrieve (top_k):</label>
+                    <div class="slider-container">
+                        <input
+                            type="range"
+                            id="topKSlider"
+                            min="1"
+                            max="10"
+                            value="3"
+                        >
+                        <span class="slider-value" id="topKValue">3</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    🎲 Get Answer
+                </button>
+
+                <div class="form-group" style="margin-top: 20px; margin-bottom: 0;">
+                    <span class="example-label">Try these example queries:</span>
+                    <div class="examples">
+                        <button type="button" class="btn btn-secondary example-btn" data-query="How does Divine Smite work?">
+                            Divine Smite
+                        </button>
+                        <button type="button" class="btn btn-secondary example-btn" data-query="What are the rules for flanking?">
+                            Flanking Rules
+                        </button>
+                        <button type="button" class="btn btn-secondary example-btn" data-query="Can a wizard cast a spell as a bonus action and then cast another spell as an action on the same turn?">
+                            Bonus Action Spells
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Error Message -->
+        <div class="error" id="errorMessage"></div>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="loading-text">Searching the tomes of knowledge...</p>
+        </div>
+
+        <!-- Results -->
+        <div class="results" id="results">
+            <!-- Answer Section -->
+            <div class="card answer-section">
+                <h3>📜 Answer</h3>
+                <div class="answer-text" id="answerText"></div>
+                <div class="metadata">
+                    <strong>Query:</strong> <span id="metaQuery"></span><br>
+                    <strong>Retrieval Model:</strong> <span id="metaModel"></span>
+                </div>
+            </div>
+
+            <!-- Passages Section -->
+            <div class="card passages-section">
+                <h3>📚 Retrieved Passages</h3>
+                <div id="passagesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === CONFIGURATION === //
+        const API_BASE_URL = window.location.origin;
+        const API_ENDPOINT = '/api/v1/mechanics/query';
+
+        // === DOM ELEMENTS === //
+        const queryForm = document.getElementById('queryForm');
+        const queryInput = document.getElementById('queryInput');
+        const topKSlider = document.getElementById('topKSlider');
+        const topKValue = document.getElementById('topKValue');
+        const submitBtn = document.getElementById('submitBtn');
+        const exampleBtns = document.querySelectorAll('.example-btn');
+        const errorMessage = document.getElementById('errorMessage');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const answerText = document.getElementById('answerText');
+        const metaQuery = document.getElementById('metaQuery');
+        const metaModel = document.getElementById('metaModel');
+        const passagesContainer = document.getElementById('passagesContainer');
+
+        // === EVENT LISTENERS === //
+
+        // Update slider value display
+        topKSlider.addEventListener('input', (e) => {
+            topKValue.textContent = e.target.value;
+        });
+
+        // Example query buttons
+        exampleBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                queryInput.value = btn.dataset.query;
+                queryInput.focus();
+            });
+        });
+
+        // Form submission
+        queryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await handleQuery();
+        });
+
+        // === MAIN QUERY HANDLER === //
+        async function handleQuery() {
+            const query = queryInput.value.trim();
+            const topK = parseInt(topKSlider.value);
+
+            // Validate input
+            if (!query) {
+                showError('Please enter a question.');
+                return;
+            }
+
+            // Hide previous results and errors
+            hideError();
+            hideResults();
+            showLoading();
+
+            try {
+                // Make API request
+                const response = await fetch(API_BASE_URL + API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: topK
+                    })
+                });
+
+                // Handle HTTP errors
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(
+                        errorData.detail ||
+                        `HTTP ${response.status}: ${response.statusText}`
+                    );
+                }
+
+                // Parse response
+                const data = await response.json();
+                console.log('API Response:', data);
+
+                // Display results
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Error: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // === DISPLAY FUNCTIONS === //
+
+        function displayResults(data) {
+            // Display answer
+            answerText.textContent = data.answer || 'No answer generated.';
+            metaQuery.textContent = data.query;
+            metaModel.textContent = data.retrieval_model || 'Unknown';
+
+            // Display passages
+            passagesContainer.innerHTML = '';
+
+            if (data.passages && data.passages.length > 0) {
+                data.passages.forEach((passage, index) => {
+                    const passageEl = createPassageElement(passage, index + 1);
+                    passagesContainer.appendChild(passageEl);
+                });
+            } else {
+                passagesContainer.innerHTML = '<p style="color: #666; font-style: italic;">No passages retrieved.</p>';
+            }
+
+            showResults();
+        }
+
+        function createPassageElement(passage, number) {
+            const div = document.createElement('div');
+            div.className = 'passage';
+
+            const scorePercent = (passage.score * 100).toFixed(1);
+
+            div.innerHTML = `
+                <div class="passage-header">
+                    <span class="passage-number">Passage ${number}</span>
+                    <span class="passage-score">${scorePercent}% match</span>
+                </div>
+                <div class="passage-text">${escapeHtml(passage.text)}</div>
+                <div class="passage-meta">
+                    <span class="passage-source">Source: ${escapeHtml(passage.source || 'Unknown')}</span>
+                    ${passage.metadata ? `<span>• Additional info available</span>` : ''}
+                </div>
+            `;
+
+            return div;
+        }
+
+        // === UTILITY FUNCTIONS === //
+
+        function showLoading() {
+            loading.classList.add('active');
+            submitBtn.disabled = true;
+        }
+
+        function hideLoading() {
+            loading.classList.remove('active');
+            submitBtn.disabled = false;
+        }
+
+        function showResults() {
+            results.classList.add('active');
+            results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function hideResults() {
+            results.classList.remove('active');
+        }
+
+        function showError(message) {
+            errorMessage.innerHTML = `<strong>Error:</strong> ${escapeHtml(message)}`;
+            errorMessage.classList.add('active');
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function hideError() {
+            errorMessage.classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // === INITIALIZATION === //
+        console.log('D&D DM Copilot Demo Initialized');
+        console.log('API Endpoint:', API_BASE_URL + API_ENDPOINT);
+    </script>
+</body>
+</html>

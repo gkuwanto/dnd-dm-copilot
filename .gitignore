@@ -4,7 +4,4 @@
 
 **/__pycache__
 cache/
-*.json
-*.csv
 wandb/
-models/
