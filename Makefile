@@ -1,4 +1,4 @@
-.PHONY: help install test test-api test-eval test-data test-model test-all lint format type-check quality-check clean dev-setup run-api evaluate-full evaluate-full-baseline evaluate-questions evaluate-rag evaluate-baseline evaluate-judge evaluate-judge-baseline
+.PHONY: help install test test-api test-eval test-data test-model test-all lint format type-check quality-check clean dev-setup download-models download-sbert download-lfm2 run-api evaluate-full evaluate-full-baseline evaluate-questions evaluate-rag evaluate-baseline evaluate-judge evaluate-judge-baseline
 
 # Default target
 .DEFAULT_GOAL := help
@@ -31,6 +31,23 @@ dev-setup: install ## Complete development environment setup
 		echo "$(YELLOW)⚠ Please edit .env with your API keys$(NC)"; \
 	fi
 	@echo "$(GREEN)✓ Development environment ready$(NC)"
+
+# ==================== Model Downloads ====================
+
+download-models: ## Download all required models from HuggingFace
+	@echo "$(BLUE)Downloading models from HuggingFace...$(NC)"
+	uv run python -m scripts.download_models
+	@echo "$(GREEN)✓ All models downloaded$(NC)"
+
+download-sbert: ## Download fine-tuned sbert model only
+	@echo "$(BLUE)Downloading fine-tuned sbert model...$(NC)"
+	uv run python -m scripts.download_models --sbert-only
+	@echo "$(GREEN)✓ sbert model downloaded to models/sbert/$(NC)"
+
+download-lfm2: ## Download LFM2 model only (for answer generation)
+	@echo "$(BLUE)Downloading LFM2 model...$(NC)"
+	uv run python -m scripts.download_models --lfm2-only
+	@echo "$(GREEN)✓ LFM2 model downloaded to models/lfm2/$(NC)"
 
 # ==================== Testing ====================
 

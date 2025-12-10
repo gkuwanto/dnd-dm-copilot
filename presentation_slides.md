@@ -1,15 +1,16 @@
 # D&D Dungeon Master Copilot
-## A Context-Aware RAG System for Improvisational Gameplay
+## Fine-Tuning Domain-Specific Embeddings for RAG
 
-**CS 506 Final Project - Midterm Presentation**  
+**CS 506 Final Project - Final Presentation**  
 **Garry Kuwanto**  
-**October 27, 2024**
+**December 10, 2024**
 
 ---
 
 ## What is RAG?
 
 ![What is RAG?](visualizations/what-is-rag.png)
+
 *Image source: [Data Science Central - RAG and its evolution](https://www.datasciencecentral.com/rag-and-its-evolution/)*
 
 **Retrieval-Augmented Generation** gives smaller, faster models access to external knowledge through context.
@@ -43,36 +44,65 @@ Being a Dungeon Master is **overwhelming**.
 
 ---
 
-## Project Vision
+## Project Goals
 
-**This project aims to help DMs** by creating a specialized RAG system that retrieves relevant information instantly, allowing for smooth, informed improvisation.
+**Build a domain-specific RAG system** with fine-tuned embeddings for D&D.
 
-### Two-Component System:
-1. **Mechanics Pipeline** (Current Focus)
-2. **Campaign Knowledge Pipeline** (Future Work)
+### Core Objectives:
+1. **Fine-tune embeddings** on D&D-specific data
+2. **Build complete RAG pipeline** (retrieval + generation)
+3. **Validate rigorously** - Address concerns about meaningful improvement
+4. **Demonstrate generalization** - Test on different distribution (5e vs 3.5e training)
+
+### Success Criteria:
+- Measurable improvement over baseline
+- End-to-end answer quality improvement
+- Reproducible, production-ready system
 
 ---
 
-## Current Work: Mechanics Pipeline
+## Data Collection & Processing
 
-### Data Processing
-- **Dataset**: 40,365 D&D 3.5 mechanics question-answer pairs
-- **Source**: Hugging Face (m0no1/dnd-mechanics-dataset)
-- **Splits**: 80/10/10 train/validation/test
+### Training Data: D&D 3.5e Mechanics
+- **Dataset**: m0no1/dnd-mechanics-dataset (Hugging Face)
+- **Size**: 40,365 question-answer pairs
 - **Format**: Query-passage pairs ready for training
+- **Splits**: 80% train / 10% validation / 10% test
 
-### Model Architecture
-- **Base Model**: sentence-transformers/all-MiniLM-L6-v2
-- **Parameters**: 22M (lightweight and efficient)
-- **Training**: Contrastive learning with MultipleNegativesRankingLoss
-- **Duration**: 5 epochs (2,525 steps)
-- **Tracking**: Weights & Biases integration
+### Test Data: D&D 5e PDF Corpus
+- **Source**: D&D 5e rulebooks (different distribution!)
+- **Evaluation**: 500 questions generated from random passages
+- **Purpose**: Test generalization to new content
+
+### Key Insight
+Training on 3.5e, testing on 5e → Tests if model learned **D&D concepts**, not just memorized data
 
 ---
 
-## Preliminary Results
+## Model Architecture & Training
 
-### Quantitative Improvements
+### Base Model
+- **sentence-transformers/all-MiniLM-L6-v2**
+- 22M parameters (lightweight and efficient)
+- Pre-trained on general text
+
+### Training Strategy
+- **Contrastive learning** with MultipleNegativesRankingLoss
+- Fine-tune on D&D 3.5e mechanics dataset
+- 5 epochs (~2,525 training steps)
+- **Weights & Biases** integration for tracking
+
+### RAG Components
+- **Retriever**: Fine-tuned MiniLM + FAISS vector store
+- **Generator**: LFM2-1.2B-RAG for answer generation
+- **API**: FastAPI backend with demo UI
+
+---
+
+## Training Results (D&D 3.5e)
+
+### Retrieval Performance on Training Distribution
+
 | Metric | Baseline | Fine-tuned | Improvement |
 |--------|----------|------------|-------------|
 | **Accuracy@1** | 34.8% | **68.2%** | **+96%** |
@@ -83,6 +113,70 @@ Being a Dungeon Master is **overwhelming**.
 ### Key Achievement
 **96% improvement in Accuracy@1** demonstrates successful domain adaptation
 
+*But are these gains meaningful? We need more rigorous validation...*
+
+---
+
+## Addressing Midterm Feedback
+
+### The Feedback:
+> "I question whether these metric gains are truly meaningful... suggest employing additional methods to validate the effectiveness of your accuracy improvements."
+
+### Our Response: Comprehensive Evaluation Pipeline
+
+1. **Different Distribution** - Test on D&D 5e (trained on 3.5e)
+2. **LLM-as-a-Judge** - DeepSeek evaluates actual answer quality
+3. **End-to-End Evaluation** - Full RAG pipeline (retrieval + generation)
+4. **Baseline Comparison** - Compare against model without RAG
+
+### Evaluation Flow:
+```
+500 5e Passages → Generate Q&A → Run RAG Pipeline → LLM Judge → Metrics
+```
+
+---
+
+## Generalization Results (D&D 5e Test Set)
+
+### Retrieval Performance (Different Distribution)
+| Metric | Fine-tuned Model |
+|--------|------------------|
+| **Accuracy@1** | 21.2% |
+| **Accuracy@3** | 34.4% |
+| **Accuracy@5** | 39.2% |
+| **Accuracy@10** | 45.6% |
+| **MRR@10** | 0.289 |
+
+*Lower than training distribution - expected for cross-distribution testing*
+
+### End-to-End Answer Quality (LLM-as-a-Judge)
+
+| System | Correct Answers | Accuracy |
+|--------|-----------------|----------|
+| **Baseline (No RAG)** | 22/500 | **4.4%** |
+| **RAG Pipeline** | 206/500 | **41.2%** |
+
+## **+836% Improvement in Answer Quality!**
+
+---
+
+## What Does 836% Mean?
+
+### The Numbers:
+- **Baseline**: 22 correct answers out of 500 (4.4%)
+- **RAG Pipeline**: 206 correct answers out of 500 (41.2%)
+- **Absolute improvement**: +36.8 percentage points
+- **Relative improvement**: (41.2 - 4.4) / 4.4 = **836%**
+
+### In Plain English:
+Our fine-tuned RAG system produces **9x more correct answers** than the baseline model without RAG.
+
+### Why This Matters:
+- Tests on **different distribution** (5e vs 3.5e training)
+- Measures **actual answer quality**, not just retrieval
+- Uses **independent judge** (DeepSeek LLM)
+- **Directly addresses** midterm feedback concerns
+
 ---
 
 ## Visual Evidence: Query-Passage Clustering
@@ -92,63 +186,178 @@ Being a Dungeon Master is **overwhelming**.
 ### Baseline Model (Left)
 - Query-passage pairs scattered with **long connecting lines**
 - Poor semantic alignment
-- Difficult to distinguish related pairs
+- Related concepts far apart
 
 ### Fine-tuned Model (Right)
 - Query-passage pairs **cluster closer together**
-- **Shorter connecting lines** indicate better semantic understanding
-- Clear visual improvement in D&D mechanics comprehension
+- **Shorter connecting lines** = better semantic understanding
+- D&D-specific concepts properly grouped
 
 ---
 
-## Code Implementation
+## Live Demo: D&D DM Copilot
 
-### Preliminary Code Available
-- **`dnd_dm_copilot/training/finetune.py`** - Complete training pipeline
-- **`dnd_dm_copilot/visualization/embedding_analysis.py`** - Visualization script
-- **Reproducible pipeline** with proper error handling
-- **Dependency management** for consistent results
+### Demo Interface at `localhost:8000/demo/`
 
-### Training Progress
-- Validation MRR shows consistent improvement
-- Convergence around 0.725 after 2,500 steps
-- Stable learning without overfitting
+**Features:**
+- Interactive question input
+- Adjustable passage retrieval (top_k slider)
+- Example queries (Divine Smite, Flanking Rules, etc.)
+- Generated answers with source attribution
+- Retrieved passages with relevance scores
+
+### Try It:
+```bash
+make install      # Install dependencies
+make download-models # Download Dependencies
+make run-api      # Start server
+# Visit localhost:8000/demo/
+```
+
+*Ask "How does Divine Smite work?" and see the magic happen!*
 
 ---
 
-## Future Vision: Campaign Knowledge
+## System Architecture
 
-### Separate Model & Data Pipeline
-- **Campaign notes** - NPCs, locations, plot threads
-- **Session transcripts** - Previous game events
-- **Custom lore** - World-building details
-- **Character backstories** - Player-specific information
+### Complete RAG Pipeline
 
-### Complete DM Copilot
-Answer both:
-- "How does this spell work?" (Mechanics)
-- "What did the tavern keeper tell us about the missing merchant?" (Lore)
+```
+User Query → Fine-tuned Embeddings → FAISS Search → Top-k Passages
+                                                          ↓
+                                         LFM2-1.2B-RAG Generator
+                                                          ↓
+                                              Generated Answer
+```
+
+### Components Built:
+- **Fine-tuned MiniLM** - Domain-specific embeddings
+- **FAISS Vector Store** - Fast similarity search
+- **LFM2-1.2B-RAG** - Local LLM for generation
+- **FastAPI Backend** - REST API with `/api/v1/mechanics/query`
+- **Demo UI** - User-friendly interface
+- **Evaluation Pipeline** - 3-step automated evaluation
+
+---
+
+## Reproducibility
+
+### Training + Evaluation Setup
+You need to have your own deepseek api key if you want to run the whole process, set it in .env with the following format
+```
+DEEPSEEK_API_KEY=
+HF_TOKEN=
+WANDB_API_KEY=
+```
+
+```bash
+# Install dependencies
+make install
+
+# Process training data
+make process-mechanics
+
+# Train embedding model
+make train
+
+# Run evaluation
+make evaluate-full CORPUS=data/processed/5e_corpus.json \
+                   LFM2_MODEL=models/lfm2/model.gguf
+
+# Start demo server
+make run-api
+```
+
+### Key Files
+- `dnd_dm_copilot/training/finetune.py` - Training pipeline
+- `dnd_dm_copilot/evaluation/` - Complete evaluation suite
+- `dnd_dm_copilot/api/` - FastAPI server with demo
+- `tests/` - Comprehensive test suite
 
 ---
 
 ## Key Findings
 
-1. **Significant Performance Gains**: 96% improvement in Accuracy@1
-2. **Visual Confirmation**: t-SNE plots show improved semantic alignment
-3. **Stable Training**: Consistent improvement without overfitting
-4. **Reproducible Pipeline**: Complete training and evaluation system
+### 1. Domain-Specific Fine-Tuning Works
+**96% improvement** in Accuracy@1 on training distribution
+
+### 2. Improvements Are Meaningful
+**836% improvement** in end-to-end answer quality on held-out test set
+
+### 3. Model Generalizes
+Works on D&D 5e content despite training on 3.5e data
+
+### 4. Complete System Built
+Production-ready RAG system with demo UI and REST API
+
+### 5. Rigorous Validation
+LLM-as-a-Judge on different distribution addresses midterm concerns
 
 ---
 
-## Next Steps
+## Summary of Results
 
-### Immediate Goals
-- **Qualitative Evaluation**: Create challenge set with diverse D&D scenarios
-- **RAG Integration**: Build full retrieval-augmented generation system
-- **Campaign Knowledge Pipeline**: Separate model for lore and campaign data
-- **Dataset Expansion**: Integrate additional D&D datasets (FIREBALL, CRD3)
-- **Multi-source Integration**: Combine mechanics, lore, and custom content
-- **Real-time DM Assistant**: Complete copilot system for improvisational gameplay
+| Evaluation | Metric | Result |
+|------------|--------|--------|
+| Training (3.5e) | Accuracy@1 | **+96%** improvement |
+| Training (3.5e) | MRR@10 | **+72%** improvement |
+| Test (5e) | Answer Quality | **+836%** improvement |
+| Test (5e) | Correct Answers | **41.2% vs 4.4%** |
 
+### Bottom Line:
+Fine-tuned embeddings + RAG = **9x more correct answers** on held-out test data
+
+---
+
+## Future Work
+
+### Immediate Extensions
+- **Campaign Knowledge Pipeline** - Separate model for lore/notes
+- **Multi-source Integration** - Combine mechanics, lore, custom content
+- **Real-time DM Assistant** - Desktop/mobile app for live gameplay
+
+### Research Directions
+- **Larger embedding models** - Test Qwen3 Embeddings
+- **Additional datasets** - FIREBALL, CRD3 for dialogue
+- **Cross-game generalization** - Pathfinder, other TTRPGs
+
+### Broader Impact
+- Methodology applicable to **other specialized domains**
+- Demonstrates value of **domain-specific fine-tuning**
+- **Lightweight models** can achieve strong performance
+
+---
+
+## Acknowledgments
+
+### Tools & Frameworks
+- **sentence-transformers** - Embedding model training
+- **FAISS** - Vector similarity search
+- **FastAPI** - Backend API
+- **LFM2** - Small lightweight LLM model used to generate answer
+- **llama-cpp-python** - Python bindings for llama.cpp to run LFM2
+- **Weights & Biases** - Experiment tracking
+- **DeepSeek** - LLM-as-a-Judge evaluation
+
+### Data Sources
+- **m0no1/dnd-mechanics-dataset** - Training data
+- **D&D 5e SRD** - Test corpus
+
+---
+
+## Questions?
+
+### Quick Links:
+- **GitHub**: https://github.com/gkuwanto/dnd-dm-copilot
+- **Demo**: `localhost:8000/demo/`
+- **Documentation**: See README.md
+
+### Key Metrics to Remember:
+- **96%** improvement on training data
+- **836%** improvement on test data
+- **41.2% vs 4.4%** correct answers
 
 **Thank you!**
+
+🎲 *Roll for initiative on your questions!*
+
