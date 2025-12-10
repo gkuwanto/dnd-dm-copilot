@@ -136,6 +136,32 @@ class TestQuestionGenerator:
         mock_client.chat_completion.assert_called_once()
 
     @patch("dnd_dm_copilot.evaluation.generate_questions.DeepSeekClient")
+    def test_generate_qa_from_passage_alt_format(
+        self, mock_client_class: MagicMock
+    ) -> None:
+        """Test generating QA pair from passage with 'passage' field."""
+        mock_client = MagicMock()
+        mock_client.chat_completion.return_value = (
+            "Answer: Divine Smite deals radiant damage.\n"
+            "Question: How does Divine Smite work?"
+        )
+        mock_client_class.return_value = mock_client
+
+        generator = QuestionGenerator()
+        passage = {
+            "passage": "Divine Smite is a Paladin feature...",
+            "metadata": {"source": "phb.pdf"},
+        }
+
+        qa_triplet = generator.generate_qa_from_passage(passage)
+
+        assert qa_triplet["question"] == "How does Divine Smite work?"
+        assert qa_triplet["answer"] == "Divine Smite deals radiant damage."
+        assert qa_triplet["passage"] == passage["passage"]
+        assert qa_triplet["metadata"] == passage["metadata"]
+        mock_client.chat_completion.assert_called_once()
+
+    @patch("dnd_dm_copilot.evaluation.generate_questions.DeepSeekClient")
     def test_generate_qa_malformed_response(self, mock_client_class: MagicMock) -> None:
         """Test handling of malformed LLM response."""
         mock_client = MagicMock()
@@ -149,14 +175,26 @@ class TestQuestionGenerator:
             generator.generate_qa_from_passage(passage)
 
     @patch("dnd_dm_copilot.evaluation.generate_questions.DeepSeekClient")
-    def test_generate_questions_batch(self, mock_client_class: MagicMock) -> None:
+    @patch("dnd_dm_copilot.evaluation.generate_questions.asyncio.run")
+    def test_generate_questions_batch(
+        self, mock_asyncio_run: MagicMock, mock_client_class: MagicMock
+    ) -> None:
         """Test generating questions for batch of passages."""
-        mock_client = MagicMock()
-        mock_client.chat_completion.side_effect = [
-            "Answer: Answer 1\nQuestion: Question 1?",
-            "Answer: Answer 2\nQuestion: Question 2?",
+        # Mock the async run to return pre-made results
+        mock_asyncio_run.return_value = [
+            {
+                "question": "Question 1?",
+                "answer": "Answer 1",
+                "passage": "Passage 1",
+                "metadata": {},
+            },
+            {
+                "question": "Question 2?",
+                "answer": "Answer 2",
+                "passage": "Passage 2",
+                "metadata": {},
+            },
         ]
-        mock_client_class.return_value = mock_client
 
         generator = QuestionGenerator()
         passages = [
@@ -169,19 +207,29 @@ class TestQuestionGenerator:
         assert len(qa_triplets) == 2
         assert qa_triplets[0]["question"] == "Question 1?"
         assert qa_triplets[1]["question"] == "Question 2?"
+        mock_asyncio_run.assert_called_once()
 
     @patch("dnd_dm_copilot.evaluation.generate_questions.DeepSeekClient")
+    @patch("dnd_dm_copilot.evaluation.generate_questions.asyncio.run")
     def test_generate_questions_batch_with_errors(
-        self, mock_client_class: MagicMock
+        self, mock_asyncio_run: MagicMock, mock_client_class: MagicMock
     ) -> None:
         """Test that batch generation continues on errors."""
-        mock_client = MagicMock()
-        mock_client.chat_completion.side_effect = [
-            "Answer: Answer 1\nQuestion: Question 1?",
-            Exception("API error"),
-            "Answer: Answer 3\nQuestion: Question 3?",
+        # Mock skipping errors - returns only successful ones
+        mock_asyncio_run.return_value = [
+            {
+                "question": "Question 1?",
+                "answer": "Answer 1",
+                "passage": "Passage 1",
+                "metadata": {},
+            },
+            {
+                "question": "Question 3?",
+                "answer": "Answer 3",
+                "passage": "Passage 3",
+                "metadata": {},
+            },
         ]
-        mock_client_class.return_value = mock_client
 
         generator = QuestionGenerator()
         passages = [

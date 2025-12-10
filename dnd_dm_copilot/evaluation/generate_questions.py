@@ -6,13 +6,14 @@ using an answer-first-then-question approach.
 """
 
 import argparse
+import asyncio
 import json
 import logging
 import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from tqdm import tqdm  # type: ignore
+from tqdm.asyncio import tqdm as atqdm  # type: ignore
 
 from dnd_dm_copilot.model.llm_client import DeepSeekClient
 
@@ -110,7 +111,10 @@ Passage:
 Generate a question-answer pair:"""
 
     def __init__(
-        self, api_key: Optional[str] = None, model: str = "deepseek-chat"
+        self,
+        api_key: Optional[str] = None,
+        model: str = "deepseek-chat",
+        max_concurrent: int = 50,
     ) -> None:
         """
         Initialize question generator.
@@ -118,9 +122,12 @@ Generate a question-answer pair:"""
         Args:
             api_key: DeepSeek API key (uses DEEPSEEK_API_KEY env var if None)
             model: Model name to use for generation
+            max_concurrent: Maximum concurrent API calls
         """
         self.client = DeepSeekClient(api_key=api_key)
+        self.async_client = self.client.get_async_client()
         self.model = model
+        self.semaphore = asyncio.Semaphore(max_concurrent)
 
     def generate_qa_from_passage(self, passage: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -136,7 +143,12 @@ Generate a question-answer pair:"""
             ValueError: If LLM response cannot be parsed
             Exception: If API call fails
         """
-        prompt = self.PROMPT_TEMPLATE.format(passage=passage["text"])
+        # Handle both formats: {"text": "..."} and {"passage": "..."}
+        passage_text = passage.get("text") or passage.get("passage", "")
+        if not passage_text:
+            raise ValueError("Passage must have 'text' or 'passage' field")
+
+        prompt = self.PROMPT_TEMPLATE.format(passage=passage_text)
         messages = [{"role": "user", "content": prompt}]
 
         try:
@@ -150,7 +162,7 @@ Generate a question-answer pair:"""
             return {
                 "question": question,
                 "answer": answer,
-                "passage": passage["text"],
+                "passage": passage_text,
                 "metadata": passage.get("metadata", {}),
             }
 
@@ -190,11 +202,62 @@ Generate a question-answer pair:"""
 
         return answer, question
 
-    def generate_questions_batch(
+    async def generate_qa_from_passage_async(
+        self, passage: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Generate a QA pair from a single passage (async version).
+
+        Args:
+            passage: Dictionary with 'text' or 'passage' and optional 'metadata'
+
+        Returns:
+            Dictionary with 'question', 'answer', 'passage', and 'metadata'
+
+        Raises:
+            ValueError: If LLM response cannot be parsed
+            Exception: If API call fails
+        """
+        # Handle both formats: {"text": "..."} and {"passage": "..."}
+        passage_text = passage.get("text") or passage.get("passage", "")
+        if not passage_text:
+            raise ValueError("Passage must have 'text' or 'passage' field")
+
+        prompt = self.PROMPT_TEMPLATE.format(passage=passage_text)
+        messages = [{"role": "user", "content": prompt}]
+
+        async with self.semaphore:
+            try:
+                response = await self.async_client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=512,
+                )
+
+                content = response.choices[0].message.content
+                if not isinstance(content, str):
+                    content = str(content)
+
+                # Parse response
+                answer, question = self._parse_response(content)
+
+                return {
+                    "question": question,
+                    "answer": answer,
+                    "passage": passage_text,
+                    "metadata": passage.get("metadata", {}),
+                }
+
+            except Exception as e:
+                logger.error(f"Failed to generate QA for passage: {e}")
+                raise
+
+    async def generate_questions_batch_async(
         self, passages: List[Dict[str, Any]], skip_errors: bool = False
     ) -> List[Dict[str, Any]]:
         """
-        Generate QA pairs for a batch of passages.
+        Generate QA pairs for a batch of passages (async with concurrency).
 
         Args:
             passages: List of passage dictionaries
@@ -203,19 +266,48 @@ Generate a question-answer pair:"""
         Returns:
             List of QA triplet dictionaries
         """
-        qa_triplets = []
 
-        for passage in tqdm(passages, desc="Generating questions"):
+        async def process_passage(passage: Dict[str, Any]) -> Optional[Dict[str, Any]]:
             try:
-                qa_triplet = self.generate_qa_from_passage(passage)
-                qa_triplets.append(qa_triplet)
+                return await self.generate_qa_from_passage_async(passage)
             except Exception as e:
                 logger.error(f"Error generating QA for passage: {e}")
                 if not skip_errors:
                     raise
+                return None
+
+        # Create tasks for all passages
+        tasks = [process_passage(p) for p in passages]
+
+        # Run with progress bar
+        qa_triplets = []
+        for coro in atqdm(
+            asyncio.as_completed(tasks),
+            total=len(tasks),
+            desc="Generating questions",
+        ):
+            result = await coro
+            if result is not None:
+                qa_triplets.append(result)
 
         logger.info(f"Generated {len(qa_triplets)} QA triplets")
         return qa_triplets
+
+    def generate_questions_batch(
+        self, passages: List[Dict[str, Any]], skip_errors: bool = False
+    ) -> List[Dict[str, Any]]:
+        """
+        Generate QA pairs for a batch of passages (synchronous wrapper).
+
+        Args:
+            passages: List of passage dictionaries
+            skip_errors: If True, continue on errors; if False, raise on first error
+
+        Returns:
+            List of QA triplet dictionaries
+        """
+        # Run async version
+        return asyncio.run(self.generate_questions_batch_async(passages, skip_errors))
 
 
 def main() -> None:
@@ -249,6 +341,12 @@ def main() -> None:
         action="store_true",
         help="Continue processing on errors instead of stopping",
     )
+    parser.add_argument(
+        "--max_concurrent",
+        type=int,
+        default=50,
+        help="Maximum concurrent API calls (default: 50)",
+    )
 
     args = parser.parse_args()
 
@@ -264,8 +362,10 @@ def main() -> None:
         )
 
         # Generate questions
-        logger.info("Generating questions...")
-        generator = QuestionGenerator()
+        logger.info(
+            f"Generating questions with {args.max_concurrent} concurrent requests..."
+        )
+        generator = QuestionGenerator(max_concurrent=args.max_concurrent)
         qa_triplets = generator.generate_questions_batch(
             sampled_passages, skip_errors=args.skip_errors
         )
