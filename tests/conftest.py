@@ -209,3 +209,17 @@ def mock_dataset_load() -> None:
         )
         mock_load.return_value = mock_dataset
         yield mock_load
+
+
+@pytest.fixture
+def test_client():
+    """
+    Fixture providing a FastAPI test client.
+
+    Returns:
+        TestClient instance for testing API endpoints
+    """
+    from dnd_dm_copilot.api.main import app
+    from fastapi.testclient import TestClient
+
+    return TestClient(app)

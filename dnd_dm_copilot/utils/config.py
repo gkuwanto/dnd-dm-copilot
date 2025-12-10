@@ -62,6 +62,40 @@ class Config:
     dialogue_variety_weight: float = 1.0
     length_weight: float = 0.5
 
+    # API Configuration
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+
+    # RAG Models
+    mechanics_model_path: str = "models/sbert/"
+    lore_model_path: str = "sentence-transformers/all-MiniLM-L6-v2"
+
+    # FAISS Index Paths
+    mechanics_index_path: str = "data/indices/mechanics/"
+    lore_index_path: str = "data/indices/lore/"
+
+    # LFM2 Configuration (GPU with llama-cpp-python)
+    lfm2_model_id: str = "LiquidAI/LFM2-1.2B-RAG"
+    lfm2_model_path: str = "models/lfm2/lfm2-1.2b-rag.gguf"
+    lfm2_n_gpu_layers: int = -1  # -1 for all layers on GPU
+    lfm2_n_ctx: int = 4096  # Context window size
+    lfm2_temperature: float = 0.0
+    lfm2_max_new_tokens: int = 512
+    lfm2_top_p: float = 1.0
+    lfm2_top_k: int = 50
+
+    # Chunking Configuration
+    chunk_size: int = 512
+    chunk_overlap: int = 50
+    min_chunk_size: int = 100
+
+    # Evaluation Configuration
+    eval_num_questions: int = 500
+    eval_top_k_values: tuple = (1, 3, 5, 10)
+
+    # Lore test files
+    lore_test_files: str = "dnd_dm_copilot/data/reddit/notes*.txt"
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if not 0 <= self.train_ratio <= 1:

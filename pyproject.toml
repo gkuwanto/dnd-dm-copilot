@@ -26,6 +26,13 @@ dependencies = [
     # API and HTTP
     "requests>=2.31.0",
     "httpx>=0.24.0",
+    # FastAPI backend
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    # PDF processing
+    "pypdf>=3.17.0",
+    # Vector store
+    "faiss-cpu>=1.7.0",
     # Configuration and utilities
     "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
@@ -42,6 +49,10 @@ dependencies = [
     "wandb>=0.22.2",
 ]
 
+[project.optional-dependencies]
+llm = [
+    "llama-cpp-python>=0.2.0",
+]
 
 [tool.black]
 line-length = 88
@@ -60,6 +71,9 @@ module = [
     "sklearn.*",
     "wandb",
     "wandb.*",
+    "faiss",
+    "pypdf",
+    "llama_cpp",
 ]
 ignore_missing_imports = true
 
